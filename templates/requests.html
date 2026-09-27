@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Borrowing Requests - CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/browse">Browse</a>
+        <a href="/list-item">List Item</a>
+        <a href="/requests">Requests</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+</header>
+
+
+<main class="browse-container">
+
+    <div class="list-item-heading">
+
+        <p class="small-text">
+            OWNER REQUESTS
+        </p>
+
+        <h1>
+            Borrowing Requests
+        </h1>
+
+        <p>
+            Review requests from students who want to borrow your equipment.
+        </p>
+
+    </div>
+
+
+    <div class="equipment-grid">
+
+        {% for request in requests_list %}
+
+        <div class="equipment-card">
+
+            <div class="equipment-icon">
+                📩
+            </div>
+
+            <h2>
+                {{ request[1] }}
+            </h2>
+
+            <p>
+                <strong>Requested by:</strong>
+                {{ request[2] }}
+            </p>
+
+            <div class="equipment-details">
+
+                <span>
+                    <strong>Start Date:</strong>
+                    {{ request[3] }}
+                </span>
+
+                <span>
+                    <strong>End Date:</strong>
+                    {{ request[4] }}
+                </span>
+
+                <span>
+                    <strong>Status:</strong>
+                    {{ request[5] }}
+                </span>
+
+            </div>
+
+
+           {% if request[5] == "Pending" %}
+
+<form
+    method="POST"
+    action="/requests/{{ request[0] }}/approve"
+>
+    <button
+        type="submit"
+        class="dashboard-main-button"
+    >
+        Approve
+    </button>
+</form>
+
+<form
+    method="POST"
+    action="/requests/{{ request[0] }}/reject"
+    style="margin-top: 10px;"
+>
+    <button
+        type="submit"
+        class="secondary-button"
+    >
+        Reject
+    </button>
+</form>
+
+{% elif request[5] == "Approved" %}
+
+<p>
+    ✅ This rental is currently active.
+</p>
+
+<form
+    method="POST"
+    action="/requests/{{ request[0] }}/complete"
+>
+    <button
+        type="submit"
+        class="dashboard-main-button"
+    >
+        Mark as Returned
+    </button>
+</form>
+
+{% elif request[5] == "Completed" %}
+
+<p>
+    ✅ Rental completed and equipment returned.
+</p>
+
+{% else %}
+
+<p>
+    Request status:
+    <strong>{{ request[5] }}</strong>
+</p>
+
+{% endif %}
+
+        </div>
+
+        {% else %}
+
+        <div class="empty-message">
+            You do not have any borrowing requests yet.
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</main>
+
+
+<footer>
+    <p>© 2026 CampusShare</p>
+</footer>
+
+</body>
+
+</html>

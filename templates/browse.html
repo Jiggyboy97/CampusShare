@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width,
+        initial-scale=1.0"
+    >
+
+    <title>
+        Browse Equipment - CampusShare
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for(
+            'static',
+            filename='css/style.css'
+        ) }}"
+    >
+
+</head>
+
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+
+        <a href="/">
+            Home
+        </a>
+
+        <a href="/browse">
+            Browse
+        </a>
+
+        <a href="/list-item">
+            List Item
+        </a>
+
+        <a href="/dashboard">
+            Dashboard
+        </a>
+
+    </nav>
+
+</header>
+
+
+<main class="browse-container">
+
+    <div class="list-item-heading">
+
+        <p class="small-text">
+            CAMPUS MARKETPLACE
+        </p>
+
+        <h1>
+            Browse Equipment
+        </h1>
+
+        <p>
+            Find equipment shared by
+            other university students.
+        </p>
+<form
+    method="GET"
+    action="/browse"
+    style="
+        margin-top: 25px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+    "
+>
+
+    <input
+        type="text"
+        name="q"
+        value="{{ search }}"
+        placeholder="Search equipment..."
+        style="
+            padding: 12px;
+            width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        "
+    >
+
+    <select
+        name="category"
+        style="
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        "
+    >
+
+        <option value="">
+            All Categories
+        </option>
+
+        {% for cat in categories %}
+
+        <option
+            value="{{ cat[0] }}"
+            {% if category == cat[0] %}selected{% endif %}
+        >
+            {{ cat[0] }}
+        </option>
+
+        {% endfor %}
+
+    </select>
+
+    <select
+    name="status"
+    style="
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+    "
+>
+
+    <option value="">
+        All Statuses
+    </option>
+
+    <option
+        value="Available"
+        {% if status == "Available" %}selected{% endif %}
+    >
+        🟢 Available
+    </option>
+
+    <option
+        value="Pending"
+        {% if status == "Pending" %}selected{% endif %}
+    >
+        🟡 Pending
+    </option>
+
+    <option
+        value="Booked"
+        {% if status == "Booked" %}selected{% endif %}
+    >
+        🔴 Booked
+    </option>
+
+</select>
+    <button
+        type="submit"
+        class="dashboard-main-button"
+    >
+        🔍 Search
+    </button>
+
+</form>
+
+    </div>
+
+
+   <div class="equipment-grid">
+
+    {% for item in equipment %}
+
+    <div class="equipment-card">
+
+        <div class="equipment-icon">
+            📦
+        </div>
+
+        <h2>{{ item[1] }}</h2>
+
+        <p class="equipment-category">
+            {{ item[2] }}
+        </p>
+
+        <p>
+            {{ item[3] }}
+        </p>
+
+        <div class="equipment-details">
+
+            <p>
+                <strong>Condition:</strong>
+                {{ item[4] }}
+            </p>
+
+            <p>
+                <strong>Type:</strong>
+                {{ item[5] }}
+            </p>
+
+            {% if item[5] == "Paid" %}
+            <p>
+                ¥{{ item[6] }} / day
+            </p>
+            {% endif %}
+
+            <p>
+                📍 {{ item[10] }}
+            </p>
+
+            <p>
+                Owner: {{ item[11] }}
+            </p>
+
+            <p>
+                <strong>Status:</strong>
+
+                {% if item[12] == "Available" %}
+                    🟢 Available
+
+                {% elif item[12] == "Pending" %}
+                    🟡 Pending
+
+                {% elif item[12] == "Booked" %}
+                    🔴 Booked
+
+                {% endif %}
+            </p>
+
+        </div>
+
+        <a
+            href="/equipment/{{ item[0] }}"
+            class="dashboard-main-button"
+        >
+            View Details
+        </a>
+
+    </div>
+
+    {% else %}
+
+        {% if search or category or status %}
+
+        <div class="empty-message">
+            No equipment matches your current filters.
+        </div>
+
+        {% else %}
+
+        <div class="empty-message">
+            No equipment has been listed yet.
+        </div>
+
+        {% endif %}
+
+    {% endfor %}
+
+</div>
+
+</main>
+
+</body>
+
+</html>

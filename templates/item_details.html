@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>{{ item[2] }} - CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/browse">Browse</a>
+        <a href="/list-item">List Item</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+</header>
+
+
+<main class="list-item-container">
+
+    <div class="list-item-heading">
+
+        <p class="small-text">
+            EQUIPMENT DETAILS
+        </p>
+
+        <h1>{{ item[2] }}</h1>
+
+        <p>
+            Listed by {{ item[12] }}
+        </p>
+
+    </div>
+
+
+    <div class="equipment-form">
+
+        <p>
+            <strong>Category:</strong>
+            {{ item[3] }}
+        </p>
+
+        <p>
+            <strong>Description:</strong>
+            {{ item[4] }}
+        </p>
+
+        <p>
+            <strong>Condition:</strong>
+            {{ item[5] }}
+        </p>
+
+        <p>
+            <strong>Sharing Type:</strong>
+            {{ item[6] }}
+        </p>
+
+        <p>
+            <strong>Rental Price:</strong>
+
+            {% if item[6] == "Paid" %}
+                ¥{{ item[7] }} per day
+            {% else %}
+                Free
+            {% endif %}
+        </p>
+
+        <p>
+            <strong>Security Deposit:</strong>
+            ¥{{ item[8] }}
+        </p>
+
+        <p>
+            <strong>Available From:</strong>
+            {{ item[9] }}
+        </p>
+
+        <p>
+            <strong>Available Until:</strong>
+            {{ item[10] }}
+        </p>
+
+        <p>
+            <strong>Pickup Location:</strong>
+            {{ item[11] }}
+        </p>
+
+        <p>
+            <strong>Owner:</strong>
+            {{ item[12] }}
+        </p>
+
+    </div>
+
+
+    <div style="margin-top: 30px;">
+        
+{% if session.get("user_id") != item[1] %}
+
+    {% if equipment_status == "Booked" %}
+
+        <div class="equipment-form">
+            <h2>🔴 Equipment Booked</h2>
+
+            <p>
+                This equipment is currently booked and cannot be requested.
+            </p>
+        </div>
+
+    {% else %}
+
+        <h2>Request This Equipment</h2>
+
+        <form
+            method="POST"
+            action="/request-equipment/{{ item[0] }}"
+            class="equipment-form"
+        >
+
+            <label for="start_date">
+                Start Date
+            </label>
+
+            <input
+                type="date"
+                id="start_date"
+                name="start_date"
+                required
+            >
+
+            <label for="end_date">
+                End Date
+            </label>
+
+            <input
+                type="date"
+                id="end_date"
+                name="end_date"
+                required
+            >
+
+            <button
+                type="submit"
+                class="dashboard-main-button equipment-submit"
+            >
+                Send Borrowing Request
+            </button>
+
+        </form>
+
+    {% endif %}
+
+{% endif %}
+       
+
+    </div>
+
+</main>
+
+</body>
+
+</html>

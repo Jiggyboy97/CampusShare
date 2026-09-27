@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>My Reviews - CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/browse">Browse</a>
+        <a href="/my-listings">My Listings</a>
+        <a href="/my-reviews">My Reviews</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+</header>
+
+
+<main style="max-width: 1200px; margin: 0 auto; padding: 50px 30px;">
+
+    <div class="list-item-heading" style="text-align: center; margin-bottom: 40px;">
+
+        <p class="small-text">
+            STUDENT FEEDBACK
+        </p>
+
+        <h1>My Reviews</h1>
+
+        <p>
+            See ratings and feedback from students who rented your equipment.
+        </p>
+
+    </div>
+
+
+    <div class="equipment-grid" style="display: flex; justify-content: center;">
+
+        {% for review in reviews %}
+
+        <div class="equipment-card" style="width: 100%; max-width: 520px;">
+
+            <div class="equipment-icon">
+                ⭐
+            </div>
+
+            <h2>
+                {{ review[0] }}/5
+            </h2>
+
+            <p>
+                {{ review[1] }}
+            </p>
+
+            <p>
+                <strong>Reviewed by:</strong>
+                {{ review[2] }}
+            </p>
+
+            <p>
+                <strong>Equipment:</strong>
+                {{ review[3] }}
+            </p>
+
+        </div>
+
+        {% else %}
+
+        <div class="empty-message">
+            You have not received any reviews yet.
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</main>
+
+</body>
+
+</html>

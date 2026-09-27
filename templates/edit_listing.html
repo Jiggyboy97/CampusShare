@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Edit Listing - CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/browse">Browse</a>
+        <a href="/my-listings">My Listings</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+</header>
+
+
+<main class="list-item-container">
+
+    <div class="list-item-heading">
+
+        <p class="small-text">
+            MANAGE EQUIPMENT
+        </p>
+
+        <h1>Edit Listing</h1>
+
+        <p>
+            Update your equipment information.
+        </p>
+
+    </div>
+
+
+    <form
+        method="POST"
+        class="equipment-form"
+    >
+
+        <label>Equipment Name</label>
+
+        <input
+            type="text"
+            name="item_name"
+            value="{{ item[2] }}"
+            required
+        >
+
+
+        <label>Category</label>
+
+        <select name="category" required>
+
+            <option value="{{ item[3] }}">
+                {{ item[3] }}
+            </option>
+
+            <option value="Camera">Camera</option>
+            <option value="Calculator">Calculator</option>
+            <option value="Microphone">Microphone</option>
+            <option value="Charger">Charger</option>
+            <option value="Tripod">Tripod</option>
+            <option value="Computer Accessories">
+                Computer Accessories
+            </option>
+            <option value="Other">Other</option>
+
+        </select>
+
+
+        <label>Description</label>
+
+        <textarea
+            name="description"
+            rows="5"
+            required
+        >{{ item[4] }}</textarea>
+
+
+        <label>Condition</label>
+
+        <select name="condition" required>
+
+            <option value="{{ item[5] }}">
+                {{ item[5] }}
+            </option>
+
+            <option value="Excellent">Excellent</option>
+            <option value="Good">Good</option>
+            <option value="Fair">Fair</option>
+
+        </select>
+
+
+        <label>Sharing Type</label>
+
+        <select name="sharing_type" required>
+
+            <option value="{{ item[6] }}">
+                {{ item[6] }}
+            </option>
+
+            <option value="Free">Free</option>
+            <option value="Paid">Paid</option>
+
+        </select>
+
+
+        <label>Price Per Day (¥)</label>
+
+        <input
+            type="number"
+            name="price"
+            value="{{ item[7] }}"
+            min="0"
+            step="0.01"
+        >
+
+
+        <label>Security Deposit (¥)</label>
+
+        <input
+            type="number"
+            name="deposit"
+            value="{{ item[8] }}"
+            min="0"
+            step="0.01"
+        >
+
+
+        <label>Available From</label>
+
+        <input
+            type="date"
+            name="available_from"
+            value="{{ item[9] }}"
+            required
+        >
+
+
+        <label>Available Until</label>
+
+        <input
+            type="date"
+            name="available_until"
+            value="{{ item[10] }}"
+            required
+        >
+
+
+        <label>Pickup Location</label>
+
+        <input
+            type="text"
+            name="location"
+            value="{{ item[11] }}"
+            required
+        >
+
+
+        <button
+            type="submit"
+            class="dashboard-main-button equipment-submit"
+        >
+            Save Changes
+        </button>
+
+    </form>
+
+</main>
+
+</body>
+</html>

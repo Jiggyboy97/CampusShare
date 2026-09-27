@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>My Rentals - CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/browse">Browse</a>
+        <a href="/list-item">List Item</a>
+        <a href="/my-rentals">My Rentals</a>
+        <a href="/requests">Requests</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+</header>
+
+
+<main class="browse-container">
+
+    <div class="list-item-heading">
+
+        <p class="small-text">
+            MY BORROWINGS
+        </p>
+
+        <h1>
+            My Rentals
+        </h1>
+
+        <p>
+            Check the status of equipment you requested to borrow or rent.
+        </p>
+
+    </div>
+
+
+    <div class="equipment-grid">
+
+        {% for rental in rentals %}
+
+        <div class="equipment-card">
+
+            <div class="equipment-icon">
+                📦
+            </div>
+
+            <h2>
+                {{ rental[1] }}
+            </h2>
+
+            <p>
+                <strong>Owner:</strong>
+                {{ rental[2] }}
+            </p>
+
+            <div class="equipment-details">
+
+                <span>
+                    <strong>Start Date:</strong>
+                    {{ rental[3] }}
+                </span>
+
+                <span>
+                    <strong>End Date:</strong>
+                    {{ rental[4] }}
+                </span>
+
+                <span>
+                    <strong>Status:</strong>
+                    {{ rental[5] }}
+                </span>
+
+                <span>
+                    <strong>Pickup Location:</strong>
+                    {{ rental[6] }}
+                </span>
+
+            </div>
+
+
+            {% if rental[5] == "Approved" %}
+
+            <p style="margin-top: 15px;">
+                ✅ Your request has been approved.
+            </p>
+
+            {% elif rental[5] == "Pending" %}
+
+            <p style="margin-top: 15px;">
+                ⏳ Waiting for the owner to respond.
+            </p>
+{% elif rental[5] == "Completed" %}
+
+<p style="margin-top: 15px;">
+    ✅ Rental completed.
+</p>
+
+{% if rental[7] == 1 %}
+
+<p>
+    ⭐ Rating submitted
+</p>
+
+{% else %}
+
+<a
+    href="/rate/{{ rental[0] }}"
+    class="dashboard-main-button"
+>
+    ⭐ Rate Owner
+</a>
+
+{% endif %}
+ 
+
+
+            {% elif rental[5] == "Rejected" %}
+
+            <p style="margin-top: 15px;">
+                ❌ Your request was rejected.
+            </p>
+
+            {% endif %}
+
+        </div>
+
+        {% else %}
+
+        <div class="empty-message">
+            You have not requested any equipment yet.
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</main>
+
+
+<footer>
+    <p>© 2026 CampusShare</p>
+</footer>
+
+</body>
+
+</html>

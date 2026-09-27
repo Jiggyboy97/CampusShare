@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width,
+        initial-scale=1.0"
+    >
+
+    <title>
+        Dashboard - CampusShare
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for(
+            'static',
+            filename='css/style.css'
+        ) }}"
+    >
+
+</head>
+
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+
+        <a href="/dashboard">
+            Dashboard
+        </a>
+
+        <a href="/browse">
+            Browse
+        </a>
+
+        <a href="/list-item">
+            List Item
+        </a>
+
+        <a href="/my-rentals">My Rentals</a>
+            
+
+<a href="/my-listings">My Listings</a>
+
+       <a href="/requests">Requests</a>
+        
+<a href="/my-reviews">My Reviews</a>
+        <a href="/logout">
+            Logout
+        </a>
+
+    </nav>
+
+</header>
+
+
+<main class="dashboard-container">
+
+<section class="dashboard-welcome">
+
+    <div>
+
+        <p class="small-text">
+            STUDENT DASHBOARD
+        </p>
+
+        <h1>
+            Welcome back,
+            {{ user_name }} 👋
+        </h1>
+
+        <p>
+            Manage your equipment,
+            rentals, borrowing requests,
+            and CampusShare activity.
+        </p>
+
+    </div>
+
+    <a
+        href="/list-item"
+        class="dashboard-main-button"
+    >
+        + List Equipment
+    </a>
+
+</section>
+
+
+<section class="dashboard-stats">
+
+    <div class="stat-card">
+
+        <span>🔍</span>
+
+        <div>
+            <h2>
+                {{ total_equipment }}
+            </h2>
+
+            <p>
+                Available Equipment
+            </p>
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <span>📦</span>
+
+        <div>
+            <h2>{{ my_borrowings }}</h2>
+            <p>My Borrowings</p>
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <span>📝</span>
+
+        <div>
+            <h2>
+                {{ my_listings }}
+            </h2>
+
+            <p>My Listings</p>
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <span>⭐</span>
+
+        <div>
+            <h2>{% if my_rating %}
+    {{ my_rating }}
+{% else %}
+    —
+{% endif %}</h2>
+            <p>My Rating</p>
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="dashboard-section">
+
+    <h2>Quick Actions</h2>
+
+    <div class="quick-actions">
+
+        <div class="action-card">
+
+            <span>🔎</span>
+
+            <h3>
+                Browse Equipment
+            </h3>
+
+            <p>
+                Find equipment available
+                from other students.
+            </p>
+
+            <a href="/browse">
+                Browse
+            </a>
+
+        </div>
+
+
+        <div class="action-card">
+
+            <span>➕</span>
+
+            <h3>
+                List Equipment
+            </h3>
+
+            <p>
+                Make unused equipment
+                available to others.
+            </p>
+
+            <a href="/list-item">
+                List Item
+            </a>
+
+        </div>
+
+
+        <div class="action-card">
+
+            <span>📅</span>
+
+            <h3>
+                My Bookings
+            </h3>
+
+            <p>
+                Check active and upcoming
+                rentals.
+            </div>
+
+<p>
+    Check active and upcoming
+    rentals.
+</p>
+
+<a href="/my-rentals">
+    View Bookings
+</a>
+
+</div>
+
+</section>
+
+
+<section class="dashboard-section">
+
+    <h2>Trust & Safety</h2>
+
+    <div class="trust-grid">
+
+        <div class="trust-card">
+
+            <span>✅</span>
+
+            <h3>
+                Student Verification
+            </h3>
+
+            <p>
+                University accounts help
+                build trust.
+            </p>
+
+        </div>
+
+
+        <div class="trust-card">
+
+            <span>📸</span>
+
+            <h3>
+                Item Condition
+            </h3>
+
+            <p>
+                Record equipment condition
+                before and after rental.
+            </p>
+
+        </div>
+
+
+        <div class="trust-card">
+
+            <span>⚠️</span>
+
+            <h3>
+                Report a Problem
+            </h3>
+
+            <p>
+                Report damage, loss,
+                or late returns.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<footer>
+    <p>© 2026 CampusShare</p>
+</footer>
+
+</body>
+
+</html>

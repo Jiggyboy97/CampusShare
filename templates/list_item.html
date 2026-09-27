@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        List Equipment - CampusShare
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
+</head>
+
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+
+        <a href="/dashboard">
+            Dashboard
+        </a>
+
+        <a href="/browse">
+            Browse
+        </a>
+
+        <a href="/list-item">
+            List Item
+        </a>
+
+        <a href="/logout">
+            Logout
+        </a>
+
+    </nav>
+
+</header>
+
+
+<main class="list-item-container">
+
+    <div class="list-item-heading">
+
+        <p class="small-text">
+            EQUIPMENT LISTING
+        </p>
+
+        <h1>
+            List Your Equipment
+        </h1>
+
+        <p>
+            Share equipment with other university students.
+        </p>
+
+    </div>
+
+
+    <form
+        method="POST"
+        action="/list-item"
+        class="equipment-form"
+    >
+
+        <label for="item_name">
+            Equipment Name
+        </label>
+
+        <input
+            type="text"
+            id="item_name"
+            name="item_name"
+            placeholder="Example: Canon EOS Camera"
+            required
+        >
+
+
+        <label for="category">
+            Category
+        </label>
+
+        <select
+            id="category"
+            name="category"
+            required
+        >
+
+            <option value="">
+                Select category
+            </option>
+
+            <option value="Camera">
+                Cameras
+            </option>
+
+            <option value="Calculator">
+                Calculators
+            </option>
+
+            <option value="Microphone">
+                Microphones
+            </option>
+
+            <option value="Charger">
+                Chargers & Adapters
+            </option>
+
+            <option value="Tripod">
+                Tripods
+            </option>
+
+            <option value="Computer Accessories">
+                Computer Accessories
+            </option>
+
+            <option value="Other">
+                Other
+            </option>
+
+        </select>
+
+
+        <label for="description">
+            Description
+        </label>
+
+        <textarea
+            id="description"
+            name="description"
+            rows="5"
+            placeholder="Describe the equipment and accessories included."
+            required
+        ></textarea>
+
+
+        <label for="condition">
+            Item Condition
+        </label>
+
+        <select
+            id="condition"
+            name="condition"
+            required
+        >
+
+            <option value="">
+                Select condition
+            </option>
+
+            <option value="Excellent">
+                Excellent
+            </option>
+
+            <option value="Good">
+                Good
+            </option>
+
+            <option value="Fair">
+                Fair
+            </option>
+
+        </select>
+
+
+        <label for="sharing_type">
+            Sharing Type
+        </label>
+
+        <select
+            id="sharing_type"
+            name="sharing_type"
+            required
+        >
+
+            <option value="">
+                Select sharing type
+            </option>
+
+            <option value="Free">
+                Free Borrowing
+            </option>
+
+            <option value="Paid">
+                Paid Rental
+            </option>
+
+        </select>
+
+
+        <label for="price">
+            Rental Price Per Day (¥)
+        </label>
+
+        <input
+            type="number"
+            id="price"
+            name="price"
+            min="0"
+            step="0.01"
+            placeholder="Example: 20"
+        >
+
+
+        <label for="deposit">
+            Security Deposit (¥)
+        </label>
+
+        <input
+            type="number"
+            id="deposit"
+            name="deposit"
+            min="0"
+            step="0.01"
+            placeholder="Example: 200"
+        >
+
+
+        <div class="date-row">
+
+            <div>
+
+                <label for="available_from">
+                    Available From
+                </label>
+
+                <input
+                    type="date"
+                    id="available_from"
+                    name="available_from"
+                    required
+                >
+
+            </div>
+
+
+            <div>
+
+                <label for="available_until">
+                    Available Until
+                </label>
+
+                <input
+                    type="date"
+                    id="available_until"
+                    name="available_until"
+                    required
+                >
+
+            </div>
+
+        </div>
+
+
+        <label for="location">
+            Campus Pickup Location
+        </label>
+
+        <input
+            type="text"
+            id="location"
+            name="location"
+            placeholder="Example: University Library"
+            required
+        >
+
+
+        <button
+            type="submit"
+            class="dashboard-main-button equipment-submit"
+        >
+            Publish Equipment
+        </button>
+
+    </form>
+
+</main>
+
+
+<footer>
+    <p>© 2026 CampusShare</p>
+</footer>
+
+</body>
+
+</html>

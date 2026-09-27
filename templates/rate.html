@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Rate Owner - CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/browse">Browse</a>
+        <a href="/my-rentals">My Rentals</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+</header>
+
+
+<main class="list-item-container">
+
+    <div class="list-item-heading">
+
+        <p class="small-text">
+            RENTAL FEEDBACK
+        </p>
+
+        <h1>Rate Owner</h1>
+
+        <p>
+            Rate your experience with {{ owner_name }}.
+        </p>
+
+    </div>
+
+
+    <form
+        method="POST"
+        class="equipment-form"
+    >
+
+        <label for="rating">
+            Rating
+        </label>
+
+        <select
+            id="rating"
+            name="rating"
+            required
+        >
+            <option value="">
+                Select rating
+            </option>
+
+            <option value="5">
+                ⭐⭐⭐⭐⭐ Excellent
+            </option>
+
+            <option value="4">
+                ⭐⭐⭐⭐ Very Good
+            </option>
+
+            <option value="3">
+                ⭐⭐⭐ Good
+            </option>
+
+            <option value="2">
+                ⭐⭐ Fair
+            </option>
+
+            <option value="1">
+                ⭐ Poor
+            </option>
+
+        </select>
+
+
+        <label for="comment">
+            Comment
+        </label>
+
+        <textarea
+            id="comment"
+            name="comment"
+            rows="5"
+            placeholder="Write a short comment about your experience."
+        ></textarea>
+
+
+        <button
+            type="submit"
+            class="dashboard-main-button equipment-submit"
+        >
+            Submit Rating
+        </button>
+
+    </form>
+
+</main>
+
+</body>
+
+</html>

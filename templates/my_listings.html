@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>My Listings - CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/browse">Browse</a>
+        <a href="/list-item">List Item</a>
+        <a href="/my-listings">My Listings</a>
+        <a href="/my-rentals">My Rentals</a>
+        <a href="/requests">Requests</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+</header>
+
+
+<main class="browse-container">
+
+    <div class="list-item-heading">
+
+        <p class="small-text">
+            MY EQUIPMENT
+        </p>
+
+        <h1>
+            My Listings
+        </h1>
+
+        <p>
+            View and manage the equipment you have listed on CampusShare.
+        </p>
+
+    </div>
+
+
+    <div class="equipment-grid">
+
+        {% for item in listings %}
+
+        <div class="equipment-card">
+
+            <div class="equipment-icon">
+                📦
+            </div>
+
+            <h2>
+                {{ item[1] }}
+            </h2>
+
+            <p class="equipment-category">
+                {{ item[2] }}
+            </p>
+
+            <p>
+                {{ item[3] }}
+            </p>
+
+            <div class="equipment-details">
+
+                <span>
+                    <strong>Condition:</strong>
+                    {{ item[4] }}
+                </span>
+
+                <span>
+                    <strong>Type:</strong>
+                    {{ item[5] }}
+                </span>
+
+                {% if item[5] == "Paid" %}
+
+                <span>
+                    <strong>Price:</strong>
+                    ¥{{ item[6] }} / day
+                </span>
+
+                {% else %}
+
+                <span>
+                    <strong>Price:</strong>
+                    Free
+                </span>
+
+                {% endif %}
+
+                <span>
+                    <strong>Deposit:</strong>
+                    ¥{{ item[7] }}
+                </span>
+
+                <span>
+                    <strong>Available:</strong>
+                    {{ item[8] }}
+                    to
+                    {{ item[9] }}
+                </span>
+
+                <span>
+                    <strong>Pickup:</strong>
+                    {{ item[10] }}
+                </span>
+{% if item[11] == "Booked" %}
+
+<p>
+    <strong>Status:</strong>
+    🔴 Booked
+</p>
+
+{% elif item[11] == "Pending" %}
+
+<p>
+    <strong>Status:</strong>
+    🟡 Pending
+</p>
+
+{% else %}
+
+<p>
+    <strong>Status:</strong>
+    🟢 Available
+</p>
+
+{% endif %}
+            </div>
+
+
+            <a
+                href="/equipment/{{ item[0] }}"
+                class="dashboard-main-button"
+            >
+                View Details
+            </a>
+<a
+    href="/edit-listing/{{ item[0] }}"
+    class="secondary-button"
+>
+    Edit Listing
+</a>
+
+<form
+    method="POST"
+    action="/delete-listing/{{ item[0] }}"
+    style="margin-top: 10px;"
+
+    <button
+    type="submit"
+    class="secondary-button"
+    onclick="return confirm('Are you sure you want to delete this listing?');"
+>
+    Delete Listing
+</button>
+</form>
+        </div>
+
+        {% else %}
+
+        <div class="empty-message">
+            You have not listed any equipment yet.
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</main>
+
+
+<footer>
+    <p>© 2026 CampusShare</p>
+</footer>
+
+</body>
+
+</html>

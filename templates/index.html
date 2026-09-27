@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width,
+        initial-scale=1.0"
+    >
+
+    <title>CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for(
+            'static',
+            filename='css/style.css'
+        ) }}"
+    >
+
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+
+        <a href="/">
+            Home
+        </a>
+
+        <a href="/browse">
+            Browse
+        </a>
+
+        <a href="/list-item">
+            List Item
+        </a>
+
+        <a href="/login">
+            Login
+        </a>
+
+        <a href="/register">
+            Register
+        </a>
+
+    </nav>
+
+</header>
+
+
+<main>
+
+<section class="hero">
+
+    <h1>
+        Share Equipment.
+        Save Money.
+        Help Students.
+    </h1>
+
+    <p>
+        A peer-to-peer equipment sharing
+        and rental system for university
+        students.
+    </p>
+
+    <div class="hero-buttons">
+
+        <a
+            href="/browse"
+            class="primary-button"
+        >
+            Browse Equipment
+        </a>
+
+        <a
+            href="/list-item"
+            class="secondary-button"
+        >
+            List Equipment
+        </a>
+
+    </div>
+
+</section>
+
+
+<section class="categories">
+
+    <h2>Browse Categories</h2>
+
+    <div class="category-grid">
+
+        <div class="category-card">
+            <span>📷</span>
+            <p>Cameras</p>
+        </div>
+
+        <div class="category-card">
+            <span>🧮</span>
+            <p>Calculators</p>
+        </div>
+
+        <div class="category-card">
+            <span>🎤</span>
+            <p>Microphones</p>
+        </div>
+
+        <div class="category-card">
+            <span>🔌</span>
+            <p>Chargers</p>
+        </div>
+
+        <div class="category-card">
+            <span>🎥</span>
+            <p>Tripods</p>
+        </div>
+
+        <div class="category-card">
+            <span>💻</span>
+            <p>
+                Computer Accessories
+            </p>
+        </div>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<footer>
+    <p>© 2026 CampusShare</p>
+</footer>
+
+</body>
+
+</html>
