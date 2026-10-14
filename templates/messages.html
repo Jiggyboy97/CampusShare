@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Messages | CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+<header class="site-header">
+
+    <div class="header-inner">
+
+        <h1 class="logo">CampusShare</h1>
+
+        <nav>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/browse">Browse</a>
+            <a href="/notifications">Notifications</a>
+            <a href="/messages">Messages</a>
+            <a href="/list-item">List Item</a>
+            <a href="/my-rentals">My Rentals</a>
+            <a href="/my-listings">My Listings</a>
+            <a href="/requests">Requests</a>
+            <a href="/my-reviews">My Reviews</a>
+            <a href="/logout">Logout</a>
+        </nav>
+
+    </div>
+
+</header>
+
+<main style="max-width: 1000px; margin: 0 auto; padding: 50px 30px;">
+
+    <div style="text-align: center; margin-bottom: 40px;">
+
+        <h1>💬 Messages</h1>
+
+        <p>
+            Your recent CampusShare conversations.
+        </p>
+
+    </div>
+
+    {% if conversations %}
+
+        {% for conversation in conversations %}
+
+        <a
+            href="/chat/{{ conversation[0] }}"
+            style="
+                text-decoration: none;
+                color: inherit;
+            "
+        >
+
+            <div style="
+                background: white;
+                padding: 22px;
+                border-radius: 14px;
+                margin-bottom: 18px;
+                box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+            ">
+
+               <h2 style="margin-top: 0;">
+    {{ conversation[1] }}
+
+    {% if conversation[5] > 0 %}
+        <span style="
+            background: #d93025;
+            color: white;
+            font-size: 13px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+        ">
+            {{ conversation[5] }}
+        </span>
+    {% endif %}
+</h2>
+
+                <p>
+                    {% if conversation[4] == current_user_id %}
+                        <strong>You:</strong>
+                    {% endif %}
+
+                    {{ conversation[2] }}
+                </p>
+
+                <small>
+                    {{ conversation[3] }}
+                </small>
+
+            </div>
+
+        </a>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div style="
+            background: white;
+            padding: 30px;
+            border-radius: 14px;
+            text-align: center;
+        ">
+            You have no conversations yet.
+        </div>
+
+    {% endif %}
+
+</main>
+
+</body>
+
+</html>

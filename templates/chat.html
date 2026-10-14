@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Chat | CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+<header>
+    <nav>
+        <h1>CampusShare</h1>
+
+        <div>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/browse">Browse</a>
+            <a href="/messages">Messages</a>
+            <a href="/requests">Requests</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+</header>
+
+<main style="
+    max-width: 850px;
+    margin: 0 auto;
+    padding: 40px 25px;
+">
+
+    <div style="margin-bottom: 30px;">
+
+       <a href="/messages">
+    ← Back to Messages
+</a>
+
+        <h1 style="margin-top: 20px;">
+            💬 Chat with {{ student[1] }}
+        </h1>
+
+        <p>
+            Private conversation between you and {{ student[1] }}.
+        </p>
+
+    </div>
+
+    <div style="
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        min-height: 350px;
+        margin-bottom: 20px;
+    ">
+
+        {% for message in messages %}
+
+            {% if message[1] == current_user_id %}
+
+          <div style="
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 15px;
+">
+    <div style="
+        background: #222;
+        color: white;
+        padding: 14px 18px;
+        border-radius: 15px;
+        max-width: 420px;
+    ">
+
+        <strong>You</strong>
+
+        <p style="margin: 5px 0;">
+            {{ message[3] }}
+        </p>
+
+        <small>
+            {{ message[4] }}
+        </small>
+
+       <form
+    method="POST"
+    action="/delete-message/{{ message[0] }}"
+    style="display: block !important; margin-top: 10px;"
+>
+    <input
+        type="submit"
+        value="Delete message"
+        onclick="return confirm('Delete this message?');"
+        style="
+            display: block !important;
+            background: red !important;
+            color: white !important;
+            border: 1px solid red !important;
+            padding: 6px 12px !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+        "
+    >
+</form>
+
+    </div>
+</div>
+
+            {% else %}
+
+            <div style="
+                display: flex;
+                justify-content: flex-start;
+                margin-bottom: 15px;
+            ">
+                <div style="
+                    background: #eeeeee;
+                    padding: 12px 16px;
+                    border-radius: 14px;
+                    max-width: 70%;
+                ">
+                    <strong>
+                        {{ message[5] }}
+                    </strong>
+
+                    <p style="margin: 5px 0;">
+                        {{ message[3] }}
+                    </p>
+
+                    <small>
+                        {{ message[4] }}
+                    </small>
+                </div>
+            </div>
+
+            {% endif %}
+
+        {% else %}
+
+        <p style="text-align: center;">
+            No messages yet. Start the conversation.
+        </p>
+
+        {% endfor %}
+
+    </div>
+
+    <form
+        method="POST"
+        style="
+            display: flex;
+            gap: 10px;
+        "
+    >
+
+        <input
+            type="text"
+            name="message"
+            placeholder="Type your message..."
+            maxlength="1000"
+            required
+            style="
+                flex: 1;
+                padding: 14px;
+                border: 1px solid #ccc;
+                border-radius: 10px;
+            "
+        >
+
+        <button
+            type="submit"
+            class="dashboard-main-button"
+        >
+            Send
+        </button>
+
+    </form>
+
+</main>
+
+</body>
+
+</html>

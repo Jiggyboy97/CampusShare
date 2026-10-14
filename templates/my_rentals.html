@@ -95,9 +95,44 @@
 
                 <span>
                     <strong>Pickup Location:</strong>
-                    {{ rental[6] }}
+                    {{ rental[9] }}
                 </span>
+<span>
+    <strong>Total Price:</strong>
+    ¥{{ rental[8] }}
+</span>
 
+<span>
+    <strong>Payment:</strong>
+    {{ rental[6] }}
+</span>
+{% if rental[5] == "Approved" and rental[6] == "Unpaid" %}
+
+<form
+    method="POST"
+    action="/pay-rental/{{ rental[0] }}"
+    style="margin-top: 10px;"
+>
+    <button
+        type="submit"
+        class="dashboard-main-button"
+        onclick="return confirm('Confirm payment for this rental?');"
+    >
+        💳 Pay Now
+    </button>
+</form>
+
+{% elif rental[6] == "Paid" %}
+
+<p style="margin-top: 10px;">
+    ✅ Payment completed
+</p>
+
+{% endif %}
+<span>
+    <strong>Deposit:</strong>
+    {{ rental[7] }}
+</span>
             </div>
 
 
@@ -118,7 +153,7 @@
     ✅ Rental completed.
 </p>
 
-{% if rental[7] == 1 %}
+{% if rental[10] == 1 %}
 
 <p>
     ⭐ Rating submitted

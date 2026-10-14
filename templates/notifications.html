@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Notifications | CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+<header>
+    <nav>
+        <h1>CampusShare</h1>
+
+        <div>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/browse">Browse</a>
+            <a href="/students">Students</a>
+            <a href="/notifications">Notifications</a>
+            <a href="/requests">Requests</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+</header>
+
+<main style="
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 50px 30px;
+">
+
+    <div style="text-align: center; margin-bottom: 40px;">
+
+        <p style="
+            font-weight: bold;
+            letter-spacing: 2px;
+        ">
+            CAMPUS ACTIVITY
+        </p>
+
+        <h1>🔔 Notifications</h1>
+
+        <p>
+            See your latest CampusShare updates.
+        </p>
+
+    </div>
+
+    {% for notification in notifications %}
+
+    <div style="
+        background: white;
+        padding: 22px;
+        border-radius: 14px;
+        margin-bottom: 18px;
+    ">
+
+        <p style="
+            font-size: 18px;
+            margin-bottom: 8px;
+        ">
+            {{ notification[1] }}
+        </p>
+
+        <small>
+            {{ notification[4] }}
+        </small>
+
+        {% if notification[2] %}
+
+        <div style="margin-top: 15px;">
+
+            <a
+                href="{{ notification[2] }}"
+                class="dashboard-main-button"
+            >
+                View
+            </a>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+    {% else %}
+
+    <div class="empty-message">
+        You have no notifications yet.
+    </div>
+
+    {% endfor %}
+
+</main>
+
+</body>
+
+</html>

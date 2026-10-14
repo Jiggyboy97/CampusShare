@@ -34,7 +34,35 @@
     <p class="register-text">
         Welcome back to CampusShare.
     </p>
+{% if request.args.get("registered") == "1" %}
+{% if request.args.get("reset") == "1" %}
 
+<div style="
+    background: #e8f7ed;
+    border: 1px solid #b7e4c7;
+    padding: 14px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    color: #1f6b3a;
+">
+    ✅ Password reset successful. You can now log in with your new password.
+</div>
+
+{% endif %}
+
+<div style="
+    background: #e8f7ed;
+    border: 1px solid #b7e4c7;
+    padding: 14px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    color: #1f6b3a;
+">
+    ✅ Registration successful! Your CampusShare account has been created.
+    Please log in.
+</div>
+
+{% endif %}
     <form
         method="POST"
         action="/login"
@@ -72,7 +100,9 @@
         </button>
 
     </form>
-
+<p style="text-align: center; margin-top: 15px;">
+    <a href="/forgot-password">Forgot Password?</a>
+</p>
     <p class="login-link">
 
         Don't have an account?

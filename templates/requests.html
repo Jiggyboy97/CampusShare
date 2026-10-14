@@ -92,8 +92,131 @@
                     {{ request[5] }}
                 </span>
 
-            </div>
+              <span>
+    <strong>Payment:</strong>
+    {{ request[6] }}
+</span>
 
+<span>
+    <strong>Security Deposit:</strong>
+    ¥{{ request[8] }}
+</span>
+
+<span>
+    <strong>Deposit Status:</strong>
+    {{ request[7] }}
+</span>  
+<span>
+    <strong>Late Fee:</strong>
+    ¥{{ request[9] }}
+</span>
+
+<span>
+    <strong>Damage Status:</strong>
+    {{ request[10] }}
+</span>
+{% if request[10] == "Damaged" and request[11] %}
+<span>
+    <strong>Damage Report:</strong>
+    {{ request[11] }}
+</span>
+{% endif %}
+            </div>
+{% if request[5] == "Approved" and request[6] == "Paid" and request[7] == "Pending" %}
+
+<form
+    method="POST"
+    action="/confirm-deposit/{{ request[0] }}"
+    style="margin-top: 10px;"
+>
+    <button
+        type="submit"
+        class="dashboard-main-button"
+        onclick="return confirm('Confirm that the security deposit has been received?');"
+    >
+        🔒 Confirm Deposit
+    </button>
+</form>
+
+{% elif request[7] == "Held" %}
+
+<p style="margin-top: 10px;">
+    🔒 Deposit held
+</p>
+{% if request[5] == "Completed" %}
+
+    {% if request[10] == "Not Checked" %}
+
+    <form
+        method="POST"
+        action="/damage-status/{{ request[0] }}/good"
+        style="margin-top: 10px;"
+    >
+        <button
+            type="submit"
+            class="dashboard-main-button"
+        >
+            ✅ Good Condition
+        </button>
+    </form>
+
+    <form
+        method="POST"
+        action="/damage-status/{{ request[0] }}/damaged"
+        style="margin-top: 10px;"
+    ><textarea
+    name="damage_report"
+    placeholder="Describe the damage..."
+    required
+    style="width: 100%; padding: 10px; margin-bottom: 10px;"
+></textarea>
+<input
+    type="number"
+    name="damage_charge"
+    min="0"
+    step="0.01"
+    placeholder="Damage charge (¥)"
+    required
+    style="width: 100%; padding: 10px; margin-bottom: 10px;"
+
+        <button
+            type="submit"
+            class="dashboard-main-button"
+        >
+            ⚠️ Damaged
+        </button>
+    </form>
+
+    {% elif request[10] == "Good Condition" %}
+
+    <p style="margin-top: 10px;">
+        ✅ Item checked: Good Condition
+    </p>
+
+    <form
+        method="POST"
+        action="/refund-deposit/{{ request[0] }}"
+        style="margin-top: 10px;"
+    >
+        <button
+            type="submit"
+            class="dashboard-main-button"
+            onclick="return confirm('Refund this security deposit?');"
+        >
+            ↩️ Refund Deposit
+        </button>
+    </form>
+
+    {% elif request[10] == "Damaged" %}
+
+    <p style="margin-top: 10px;">
+        ⚠️ Item marked as damaged. Deposit remains held.
+    </p>
+
+    {% endif %}
+
+{% endif %}
+{% endif %}
 
            {% if request[5] == "Pending" %}
 
