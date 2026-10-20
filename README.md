@@ -31,8 +31,8 @@ that have not been recalculated against a verified scoring method.
 
 ### Still to do or verify
 
-- [ ] Configure real email delivery for password resets and notifications;
-      add email verification.
+- [ ] Configure SMTP credentials and verify password-reset delivery in a real
+      inbox; add email verification and email notifications.
 - [ ] Add account lockout or rate limiting for repeated failed logins.
 - [ ] Decide whether the project needs a real payment provider before launch.
 - [ ] Add image uploads and hourly rentals if they remain in the requirements.
@@ -90,6 +90,27 @@ future runs so existing sessions and password-reset links remain valid. The
 PowerShell environment variable lasts only for the current terminal session.
 Do not commit the secret. The demo server listens on `127.0.0.1` and is not
 exposed to other devices.
+
+### Password-reset email (SMTP)
+
+Password-reset links are sent using SMTP with STARTTLS by default. Before
+starting the app, set the SMTP connection details in the same PowerShell
+session. For Gmail, use an App Password (with 2-Step Verification enabled),
+not your regular account password:
+
+```powershell
+$env:CAMPUSSHARE_SMTP_HOST = "smtp.gmail.com"
+$env:CAMPUSSHARE_SMTP_PORT = "587"
+$env:CAMPUSSHARE_SMTP_SECURITY = "starttls"
+$env:CAMPUSSHARE_SMTP_FROM = "your-account@gmail.com"
+$env:CAMPUSSHARE_SMTP_USERNAME = "your-account@gmail.com"
+$env:CAMPUSSHARE_SMTP_PASSWORD = "<your Gmail App Password>"
+```
+
+For another provider, use its SMTP host, port, security mode (`starttls` or
+`ssl`), sender address, and credentials. Keep passwords out of source control.
+SMTP delivery errors are recorded in the application log; the reset page
+doesn't reveal whether an account exists. Reset links expire after 30 minutes.
 
 ## Running the workflow tests
 

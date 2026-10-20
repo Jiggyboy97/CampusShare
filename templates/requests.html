@@ -147,6 +147,7 @@
     action="{{ url_for('settle_damage', request_id=request[0]) }}"
     style="margin-top: 10px;"
 >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button
         type="submit"
         class="dashboard-main-button"
@@ -165,6 +166,7 @@
     action="/confirm-deposit/{{ request[0] }}"
     style="margin-top: 10px;"
 >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button
         type="submit"
         class="dashboard-main-button"
@@ -188,6 +190,7 @@
         action="/damage-status/{{ request[0] }}/good"
         style="margin-top: 10px;"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button
             type="submit"
             class="dashboard-main-button"
@@ -200,7 +203,9 @@
         method="POST"
         action="/damage-status/{{ request[0] }}/damaged"
         style="margin-top: 10px;"
-    ><textarea
+    >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <textarea
     name="damage_report"
     placeholder="Describe the damage..."
     required
@@ -234,6 +239,7 @@
         action="/refund-deposit/{{ request[0] }}"
         style="margin-top: 10px;"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button
             type="submit"
             class="dashboard-main-button"
@@ -260,7 +266,8 @@
     method="POST"
     action="/requests/{{ request[0] }}/approve"
 >
-    <button
+   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+   <button
         type="submit"
         class="dashboard-main-button"
     >
@@ -273,7 +280,8 @@
     action="/requests/{{ request[0] }}/reject"
     style="margin-top: 10px;"
 >
-    <button
+   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+   <button
         type="submit"
         class="secondary-button"
     >
@@ -291,7 +299,8 @@
     method="POST"
     action="/requests/{{ request[0] }}/complete"
 >
-    <button
+   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+   <button
         type="submit"
         class="dashboard-main-button"
     >

@@ -56,6 +56,7 @@
         method="POST"
         class="equipment-form"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <label for="rating">
             Rating

@@ -453,6 +453,47 @@ nav a {
     border-radius: 12px;
 }
 
+.error-container {
+    width: min(92%, 560px);
+    margin: 12vh auto;
+    padding: 32px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+}
+
+.error-container h1 {
+    margin: 10px 0;
+}
+
+.error-container p {
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.field-error {
+    display: block;
+    min-height: 1.2em;
+    margin-top: 4px;
+    color: #b42318;
+    font-size: 0.9rem;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    margin: 28px 0;
+}
+
+.pagination a {
+    padding: 9px 14px;
+    border: 1px solid #222;
+    border-radius: 8px;
+    text-decoration: none;
+}
+
 
 /* FOOTER */
 
@@ -549,5 +590,53 @@ footer {
 
     .dashboard-welcome h1 {
         font-size: 28px;
+    }
+}
+
+@media (max-width: 380px) {
+    .navbar,
+    .dashboard-navbar {
+        padding: 16px 5%;
+    }
+
+    nav {
+        gap: 12px;
+    }
+
+    nav a {
+        font-size: 14px;
+    }
+
+    .browse-container,
+    .dashboard-container,
+    .list-item-container {
+        width: 94%;
+        margin: 22px auto;
+    }
+
+    .equipment-card,
+    .equipment-form,
+    .register-container {
+        padding: 18px;
+    }
+
+    .dashboard-welcome {
+        padding: 22px;
+    }
+
+    .dashboard-stats,
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .equipment-card,
+    .action-card,
+    .trust-card {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .error-container {
+        padding: 22px;
     }
 }

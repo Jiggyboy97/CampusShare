@@ -77,6 +77,7 @@
         action="/list-item"
         class="equipment-form"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <label for="item_name">
             Equipment Name
@@ -243,8 +244,11 @@
                     type="date"
                     id="available_from"
                     name="available_from"
+                    min="{{ today }}"
+                    aria-describedby="available_from_error"
                     required
                 >
+                <span class="field-error" id="available_from_error" aria-live="polite"></span>
 
             </div>
 
@@ -259,8 +263,11 @@
                     type="date"
                     id="available_until"
                     name="available_until"
+                    min="{{ today }}"
+                    aria-describedby="available_until_error"
                     required
                 >
+                <span class="field-error" id="available_until_error" aria-live="polite"></span>
 
             </div>
 
@@ -290,6 +297,30 @@
     </form>
 
 </main>
+
+<script>
+    const availableFrom = document.getElementById("available_from");
+    const availableUntil = document.getElementById("available_until");
+    const updateAvailabilityDates = () => {
+        const minimumEndDate = availableFrom.value || "{{ today }}";
+        availableUntil.min = minimumEndDate;
+        document.getElementById("available_from_error").textContent =
+            availableFrom.value && availableFrom.value < "{{ today }}"
+                ? "Choose today or a future date."
+                : "";
+        document.getElementById("available_until_error").textContent =
+            availableUntil.value && availableUntil.value < minimumEndDate
+                ? "Available Until must be on or after Available From."
+                : "";
+    };
+    availableFrom.addEventListener("change", () => {
+        if (availableUntil.value && availableUntil.value < availableUntil.min) {
+            availableUntil.value = "";
+        }
+        updateAvailabilityDates();
+    });
+    availableUntil.addEventListener("change", updateAvailabilityDates);
+</script>
 
 
 <footer>

@@ -135,6 +135,7 @@
             action="/request-equipment/{{ item[0] }}"
             class="equipment-form"
         >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <label for="start_date">
                 Start Date
@@ -144,8 +145,11 @@
                 type="date"
                 id="start_date"
                 name="start_date"
+                min="{{ today }}"
+                aria-describedby="start_date_error"
                 required
             >
+            <span class="field-error" id="start_date_error" aria-live="polite"></span>
 
             <label for="end_date">
                 End Date
@@ -155,8 +159,11 @@
                 type="date"
                 id="end_date"
                 name="end_date"
+                min="{{ today }}"
+                aria-describedby="end_date_error"
                 required
             >
+            <span class="field-error" id="end_date_error" aria-live="polite"></span>
 
             <button
                 type="submit"
@@ -174,7 +181,33 @@
 
     </div>
 
-</main>
+    <script>
+        const rentalStart = document.getElementById("start_date");
+        const rentalEnd = document.getElementById("end_date");
+        if (rentalStart && rentalEnd) {
+            const updateRentalDates = () => {
+                const minimumEndDate = rentalStart.value || "{{ today }}";
+                rentalEnd.min = minimumEndDate;
+                document.getElementById("start_date_error").textContent =
+                    rentalStart.value && rentalStart.value < "{{ today }}"
+                        ? "Choose today or a future date."
+                        : "";
+                document.getElementById("end_date_error").textContent =
+                    rentalEnd.value && rentalEnd.value < minimumEndDate
+                        ? "End date must be on or after the start date."
+                        : "";
+            };
+            rentalStart.addEventListener("change", () => {
+                if (rentalEnd.value && rentalEnd.value < rentalEnd.min) {
+                    rentalEnd.value = "";
+                }
+                updateRentalDates();
+            });
+            rentalEnd.addEventListener("change", updateRentalDates);
+        }
+    </script>
+
+    </main>
 
 </body>
 

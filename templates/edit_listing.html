@@ -56,6 +56,7 @@
         method="POST"
         class="equipment-form"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <label>Equipment Name</label>
 
@@ -154,8 +155,11 @@
             type="date"
             name="available_from"
             value="{{ item[9] }}"
+            min="{{ today }}"
+            aria-describedby="available_from_error"
             required
         >
+        <span class="field-error" id="available_from_error" aria-live="polite"></span>
 
 
         <label>Available Until</label>
@@ -164,8 +168,11 @@
             type="date"
             name="available_until"
             value="{{ item[10] }}"
+            min="{{ today }}"
+            aria-describedby="available_until_error"
             required
         >
+        <span class="field-error" id="available_until_error" aria-live="polite"></span>
 
 
         <label>Pickup Location</label>
@@ -188,6 +195,30 @@
     </form>
 
 </main>
+
+<script>
+    const availableFrom = document.querySelector('[name="available_from"]');
+    const availableUntil = document.querySelector('[name="available_until"]');
+    const updateAvailabilityDates = () => {
+        const minimumEndDate = availableFrom.value || "{{ today }}";
+        availableUntil.min = minimumEndDate;
+        document.getElementById("available_from_error").textContent =
+            availableFrom.value && availableFrom.value < "{{ today }}"
+                ? "Choose today or a future date."
+                : "";
+        document.getElementById("available_until_error").textContent =
+            availableUntil.value && availableUntil.value < minimumEndDate
+                ? "Available Until must be on or after Available From."
+                : "";
+    };
+    availableFrom.addEventListener("change", () => {
+        if (availableUntil.value && availableUntil.value < availableUntil.min) {
+            availableUntil.value = "";
+        }
+        updateAvailabilityDates();
+    });
+    availableUntil.addEventListener("change", updateAvailabilityDates);
+</script>
 
 </body>
 </html>

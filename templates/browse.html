@@ -263,6 +263,18 @@
 
 </div>
 
+{% if total_pages > 1 %}
+<nav class="pagination" aria-label="Browse pages">
+    {% if page > 1 %}
+    <a href="{{ url_for('browse', q=search, category=category, status=status, page=page - 1) }}">Previous</a>
+    {% endif %}
+    <span>Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="{{ url_for('browse', q=search, category=category, status=status, page=page + 1) }}">Next</a>
+    {% endif %}
+</nav>
+{% endif %}
+
 </main>
 
 </body>

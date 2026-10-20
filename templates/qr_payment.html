@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>QR Payment - CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body class="dashboard-body">
+
+<header class="dashboard-navbar">
+
+    <div class="logo">
+        CampusShare
+    </div>
+
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/browse">Browse</a>
+        <a href="/my-rentals">My Rentals</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+</header>
+
+<main class="browse-container">
+
+    <div class="list-item-heading">
+
+        <p class="small-text">
+            QR PAYMENT
+        </p>
+
+        <h1>
+            Scan to Pay
+        </h1>
+
+        <p>
+            Demo payment only — no real money is processed.
+        </p>
+
+    </div>
+
+    <div
+        class="equipment-card"
+        style="
+            max-width: 500px;
+            margin: auto;
+            text-align: center;
+        "
+    >
+
+        <h2>
+            {{ rental[5] }}
+        </h2>
+
+        <p>
+            <strong>Owner:</strong>
+            {{ rental[6] }}
+        </p>
+
+        <p>
+            <strong>Amount:</strong>
+            ¥{{ "%.2f"|format(rental[4] or 0) }}
+        </p>
+
+        <p>
+            <strong>Payment Status:</strong>
+            {{ rental[3] }}
+        </p>
+
+        <div style="margin: 25px 0;">
+
+            <img
+                src="{{ url_for('qr_payment_image', token=token) }}"
+                alt="Demo QR Payment Code"
+                style="
+                    width: 260px;
+                    max-width: 100%;
+                "
+            >
+
+        </div>
+
+        <p>
+            📱 Scan the demo QR code or continue on this device.
+        </p>
+
+        <p>
+            The QR code expires after 10 minutes.
+        </p>
+
+        <a
+            href="{{ payment_url }}"
+            class="dashboard-main-button"
+        >
+            Continue Demo Payment
+        </a>
+
+        <p style="margin-top: 20px;">
+
+            <a href="{{ url_for('my_rentals') }}">
+                ← Back to My Rentals
+            </a>
+
+        </p>
+
+    </div>
+
+</main>
+
+</body>
+
+</html>

@@ -165,6 +165,8 @@
     method="POST"
     action="/delete-listing/{{ item[0] }}"
     style="margin-top: 10px;"
+>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <button
     type="submit"

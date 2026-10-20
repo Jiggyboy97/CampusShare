@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Confirm Payment - CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body class="dashboard-body">
+
+<main class="browse-container">
+
+    <div
+        class="equipment-card"
+        style="
+            max-width: 500px;
+            margin: 70px auto;
+            text-align: center;
+        "
+    >
+
+        {% if payment_success %}
+
+        <h1>
+            ✅ Demo Payment Confirmed
+        </h1>
+
+        <p>
+            This demo marked your rental payment as paid. No real money was processed.
+        </p>
+
+        <p>
+            <strong>Item:</strong>
+            {{ rental[5] }}
+        </p>
+
+        <p>
+            <strong>Amount:</strong>
+            ¥{{ "%.2f"|format(rental[4] or 0) }}
+        </p>
+
+        <p>
+            <strong>Payment Status:</strong>
+            Paid
+        </p>
+
+        <a
+            href="{{ url_for('my_rentals') }}"
+            class="dashboard-main-button"
+        >
+            Return to My Rentals
+        </a>
+
+        {% else %}
+
+        <h1>
+            Confirm Payment
+        </h1>
+
+        <p>
+            <strong>Item:</strong>
+            {{ rental[5] }}
+        </p>
+
+        <p>
+            <strong>Owner:</strong>
+            {{ rental[6] }}
+        </p>
+
+        <p>
+            <strong>Amount:</strong>
+            ¥{{ "%.2f"|format(rental[4] or 0) }}
+        </p>
+
+        <p>
+            Click below to mark this rental as paid for the demo. No real money will be processed.
+        </p>
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <button
+                type="submit"
+                class="dashboard-main-button"
+                onclick="return confirm('Confirm this payment?');"
+            >
+                ✅ Confirm Demo Payment
+            </button>
+
+        </form>
+
+        {% endif %}
+
+    </div>
+
+</main>
+
+</body>
+
+</html>
