@@ -76,6 +76,7 @@
                 {{ rental[2] }}
             </p>
 
+
             <div class="equipment-details">
 
                 <span>
@@ -97,78 +98,130 @@
                     <strong>Pickup Location:</strong>
                     {{ rental[9] }}
                 </span>
-<span>
-    <strong>Total Price:</strong>
-    ¥{{ rental[8] }}
-</span>
-<span>
-    <strong>Deposit Status:</strong>
-    {{ rental[7] }}
-</span>
 
-<span>
-    <strong>Security Deposit:</strong>
-    ¥{{ "%.2f"|format(rental[11] or 0) }}
-</span>
+                <span>
+                    <strong>Total Price:</strong>
+                    ¥{{ rental[8] }}
+                </span>
 
-{% if rental[12] == "Damaged" %}
+                <span>
+                    <strong>Deposit Status:</strong>
+                    {{ rental[7] }}
+                </span>
 
-<span>
-    <strong>Damage Status:</strong>
-    {{ rental[12] }}
-</span>
-
-{% if rental[13] %}
-<span>
-    <strong>Damage Report:</strong>
-    {{ rental[13] }}
-</span>
-{% endif %}
-
-<span>
-    <strong>Damage Charge:</strong>
-    ¥{{ "%.2f"|format(rental[14] or 0) }}
-</span>
-
-{% if rental[7] == "Settled" %}
-
-{% set refund_received = (rental[11] or 0) - (rental[14] or 0) %}
-
-<span>
-    <strong>Refund Received:</strong>
-    ¥{{ "%.2f"|format(refund_received if refund_received > 0 else 0) }}
-</span>
-
-<span>
-    ✅ Damage settlement completed.
-</span>
-
-{% endif %}
-{% endif %}
-<span>
-    <strong>Payment:</strong>
-    {{ rental[6] }}
-</span>
-{% if rental[5] == "Approved" and rental[6] == "Unpaid" %}
-
-<form
-    method="POST"
-    action="/pay-rental/{{ rental[0] }}"
-    style="margin-top: 10px;"
->
-    <button
-        type="submit"
-        class="dashboard-main-button"
-        onclick="return confirm('Confirm payment for this rental?');"
-  >
-    💳 Pay Now
-</button>
-</form>
-
-{% elif rental[6] == "Paid" %}
+                <span>
+                    <strong>Security Deposit:</strong>
+                    ¥{{ "%.2f"|format(rental[11] or 0) }}
+                </span>
 
 
-{% endif %}
+                {% if rental[12] == "Damaged" %}
+
+                <span>
+                    <strong>Damage Status:</strong>
+                    {{ rental[12] }}
+                </span>
+
+                {% if rental[13] %}
+
+                <span>
+                    <strong>Damage Report:</strong>
+                    {{ rental[13] }}
+                </span>
+
+                {% endif %}
+
+
+                <span>
+                    <strong>Damage Charge:</strong>
+                    ¥{{ "%.2f"|format(rental[14] or 0) }}
+                </span>
+
+
+                {% if rental[7] == "Settled" %}
+
+                {% set refund_received = (rental[11] or 0) - (rental[14] or 0) %}
+
+                <span>
+                    <strong>Refund Received:</strong>
+                    ¥{{ "%.2f"|format(refund_received if refund_received > 0 else 0) }}
+                </span>
+
+                <span>
+                    ✅ Damage settlement completed.
+                </span>
+
+                {% endif %}
+
+                {% endif %}
+
+
+                <span>
+                    <strong>Payment:</strong>
+                    {{ rental[6] }}
+                </span>
+
+
+                {% if (rental[15] or 0) > 0 %}
+
+                <p style="margin-top: 10px;">
+                    <strong>Late Fee:</strong>
+                    ¥{{ "%.2f"|format(rental[15] or 0) }}
+                </p>
+
+                <p>
+                    <strong>Late Fee Status:</strong>
+                    {{ rental[16] }}
+                </p>
+
+
+                {% if rental[16] == "Unpaid" %}
+
+                <form
+                    method="POST"
+                    action="{{ url_for('pay_late_fee', request_id=rental[0]) }}"
+                    style="margin-top: 10px;"
+                >
+                    <button
+                        type="submit"
+                        class="dashboard-main-button"
+                        onclick="return confirm('Pay this late fee?');"
+                    >
+                        💳 Pay Late Fee
+                    </button>
+                </form>
+
+                {% elif rental[16] == "Paid" %}
+
+                <p style="margin-top: 10px;">
+                    ✅ Late fee paid.
+                </p>
+
+                {% endif %}
+
+                {% endif %}
+
+
+                {% if rental[5] == "Approved" and rental[6] == "Unpaid" %}
+
+                <form
+                    method="POST"
+                    action="/pay-rental/{{ rental[0] }}"
+                    style="margin-top: 10px;"
+                >
+                    <button
+                        type="submit"
+                        class="dashboard-main-button"
+                        onclick="return confirm('Confirm payment for this rental?');"
+                    >
+                        💳 Pay Now
+                    </button>
+                </form>
+
+                {% endif %}
+
+            </div>
+
 
             {% if rental[5] == "Approved" %}
 
@@ -176,34 +229,37 @@
                 ✅ Your request has been approved.
             </p>
 
+
             {% elif rental[5] == "Pending" %}
 
             <p style="margin-top: 15px;">
                 ⏳ Waiting for the owner to respond.
             </p>
-{% elif rental[5] == "Completed" %}
 
-<p style="margin-top: 15px;">
-    ✅ Rental completed.
-</p>
 
-{% if rental[10] == 1 %}
+            {% elif rental[5] == "Completed" %}
 
-<p>
-    ⭐ Rating submitted
-</p>
+            <p style="margin-top: 15px;">
+                ✅ Rental completed.
+            </p>
 
-{% else %}
 
-<a
-    href="/rate/{{ rental[0] }}"
-    class="dashboard-main-button"
->
-    ⭐ Rate Owner
-</a>
+            {% if rental[10] == 1 %}
 
-{% endif %}
- 
+            <p>
+                ⭐ Rating submitted
+            </p>
+
+            {% else %}
+
+            <a
+                href="/rate/{{ rental[0] }}"
+                class="dashboard-main-button"
+            >
+                ⭐ Rate Owner
+            </a>
+
+            {% endif %}
 
 
             {% elif rental[5] == "Rejected" %}
@@ -215,6 +271,7 @@
             {% endif %}
 
         </div>
+
 
         {% else %}
 

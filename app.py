@@ -84,6 +84,7 @@ payment_status TEXT NOT NULL DEFAULT 'Unpaid',
 deposit_status TEXT NOT NULL DEFAULT 'Pending',
 total_price REAL DEFAULT 0,
 late_fee REAL DEFAULT 0,
+late_fee_status TEXT NOT NULL DEFAULT 'Unpaid',
 damage_status TEXT NOT NULL DEFAULT 'Not Checked',
 damage_report TEXT DEFAULT '',
 damage_charge REAL DEFAULT 0,
@@ -92,7 +93,18 @@ damage_charge REAL DEFAULT 0,
             FOREIGN KEY (borrower_id) REFERENCES users(id)
         )
     """)
+    columns = [
+        row[1]
+        for row in connection.execute(
+            "PRAGMA table_info(borrowing_requests)"
+        ).fetchall()
+    ]
 
+    if "late_fee_status" not in columns:
+        connection.execute(
+            "ALTER TABLE borrowing_requests "
+            "ADD COLUMN late_fee_status TEXT NOT NULL DEFAULT 'Unpaid'"
+        )
     # RATINGS TABLE
     connection.execute("""
         CREATE TABLE IF NOT EXISTS ratings (
@@ -858,7 +870,9 @@ borrowing_requests.total_price,
 equipment.deposit,
 borrowing_requests.damage_status,
 borrowing_requests.damage_report,
-borrowing_requests.damage_charge
+borrowing_requests.damage_charge,
+borrowing_requests.late_fee,
+borrowing_requests.late_fee_status
         FROM borrowing_requests
 
         JOIN equipment
@@ -1821,7 +1835,64 @@ def pay_rental(request_id):
 
     return redirect(url_for("my_rentals"))
 
+@app.route("/pay-late-fee/<int:request_id>", methods=["POST"])
+def pay_late_fee(request_id):
 
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    connection = sqlite3.connect(DATABASE)
+
+    rental = connection.execute(
+        """
+        SELECT
+            borrower_id,
+            status,
+            late_fee,
+            late_fee_status
+        FROM borrowing_requests
+        WHERE id = ?
+        """,
+        (request_id,)
+    ).fetchone()
+
+    if rental is None:
+        connection.close()
+        return redirect(url_for("my_rentals"))
+
+    # Only the borrower can pay the late fee
+    if rental[0] != session["user_id"]:
+        connection.close()
+        return "You cannot pay this late fee."
+
+    # Rental must already be completed
+    if rental[1] != "Completed":
+        connection.close()
+        return "The rental must be completed first."
+
+    # There must actually be a late fee
+    if float(rental[2] or 0) <= 0:
+        connection.close()
+        return "There is no late fee to pay."
+
+    # Prevent paying twice
+    if rental[3] == "Paid":
+        connection.close()
+        return redirect(url_for("my_rentals"))
+
+    connection.execute(
+        """
+        UPDATE borrowing_requests
+        SET late_fee_status = 'Paid'
+        WHERE id = ?
+        """,
+        (request_id,)
+    )
+
+    connection.commit()
+    connection.close()
+
+    return redirect(url_for("my_rentals"))
 
 @app.route("/confirm-deposit/<int:request_id>", methods=["POST"])
 def confirm_deposit(request_id):
