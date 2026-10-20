@@ -854,8 +854,11 @@ borrowing_requests.total_price,
                 )
                 THEN 1
                 ELSE 0
-            END AS has_rated
-
+            END AS has_rated,
+equipment.deposit,
+borrowing_requests.damage_status,
+borrowing_requests.damage_report,
+borrowing_requests.damage_charge
         FROM borrowing_requests
 
         JOIN equipment
@@ -1935,25 +1938,26 @@ def update_damage_status(request_id, condition):
 
 
     connection.execute(
-        """
-        UPDATE borrowing_requests
-       SET damage_status = ?,
+    """
+    UPDATE borrowing_requests
+    SET damage_status = ?,
     damage_report = ?,
     damage_charge = ?
-WHERE id = ?
-        """,
+    WHERE id = ?
+    """,
+    (
     allowed_conditions[condition],
-damage_report,
-damage_charge,
-request_id  
-        
-        
+    damage_report,
+    damage_charge,
+    request_id
     )
-
+    )
     connection.commit()
     connection.close()
 
     return redirect(url_for("owner_requests"))
+
+
 @app.route("/refund-deposit/<int:request_id>", methods=["POST"])
 def refund_deposit(request_id):
 
@@ -2006,8 +2010,75 @@ borrowing_requests.damage_status
 
     connection.commit()
     connection.close()
+    return redirect(url_for("owner_requests"))
+@app.route("/settle-damage/<int:request_id>", methods=["POST"])
+def settle_damage(request_id):
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    connection = sqlite3.connect(DATABASE)
+
+    rental = connection.execute(
+        """
+        SELECT
+            equipment.owner_id,
+            borrowing_requests.status,
+            borrowing_requests.deposit_status,
+            borrowing_requests.damage_status,
+            equipment.deposit,
+            borrowing_requests.damage_charge
+        FROM borrowing_requests
+        JOIN equipment
+            ON borrowing_requests.equipment_id = equipment.id
+        WHERE borrowing_requests.id = ?
+        """,
+        (request_id,)
+    ).fetchone()
+
+    if rental is None:
+        connection.close()
+        return redirect(url_for("owner_requests"))
+
+    if rental[0] != session["user_id"]:
+        connection.close()
+        return "You cannot settle this damage."
+
+    if rental[1] != "Completed":
+        connection.close()
+        return "The equipment must be returned first."
+
+    if rental[2] != "Held":
+        connection.close()
+        return "The deposit is not currently held."
+
+    if rental[3] != "Damaged":
+        connection.close()
+        return "This item is not marked as damaged."
+
+    deposit_amount = float(rental[4] or 0)
+    damage_charge = float(rental[5] or 0)
+
+    amount_deducted = min(deposit_amount, damage_charge)
+    refund_amount = max(deposit_amount - damage_charge, 0)
+    amount_owed = max(damage_charge - deposit_amount, 0)
+
+    connection.execute(
+        """
+        UPDATE borrowing_requests
+        SET deposit_status = 'Settled'
+        WHERE id = ?
+        """,
+        (request_id,)
+    )
+
+    connection.commit()
+    connection.close()
 
     return redirect(url_for("owner_requests"))
+
+
+   
 # =====================================================
 # START APPLICATION
 # =====================================================

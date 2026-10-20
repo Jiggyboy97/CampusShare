@@ -121,6 +121,42 @@
     {{ request[11] }}
 </span>
 {% endif %}
+{% if request[10] == "Damaged" and request[7] == "Settled" %}
+
+{% set refund_amount = (request[8] or 0) - (request[12] or 0) %}
+
+<p style="margin-top: 10px;">
+    <strong>Damage Charge:</strong>
+    ¥{{ "%.2f"|format(request[12] or 0) }}
+</p>
+
+<p>
+    <strong>Refund to Borrower:</strong>
+    ¥{{ "%.2f"|format(refund_amount if refund_amount > 0 else 0) }}
+</p>
+
+<p>
+    ✅ Damage settlement completed.
+</p>
+
+{% endif %}
+{% if request[5] == "Completed" and request[7] == "Held" and request[10] == "Damaged" %}
+
+<form
+    method="POST"
+    action="{{ url_for('settle_damage', request_id=request[0]) }}"
+    style="margin-top: 10px;"
+>
+    <button
+        type="submit"
+        class="dashboard-main-button"
+        onclick="return confirm('Settle this damage charge and release the remaining deposit?');"
+    >
+        💰 Settle Damage
+    </button>
+</form>
+
+{% endif %}
             </div>
 {% if request[5] == "Approved" and request[6] == "Paid" and request[7] == "Pending" %}
 
@@ -178,7 +214,7 @@
     placeholder="Damage charge (¥)"
     required
     style="width: 100%; padding: 10px; margin-bottom: 10px;"
-
+>
         <button
             type="submit"
             class="dashboard-main-button"

@@ -101,7 +101,50 @@
     <strong>Total Price:</strong>
     ¥{{ rental[8] }}
 </span>
+<span>
+    <strong>Deposit Status:</strong>
+    {{ rental[7] }}
+</span>
 
+<span>
+    <strong>Security Deposit:</strong>
+    ¥{{ "%.2f"|format(rental[11] or 0) }}
+</span>
+
+{% if rental[12] == "Damaged" %}
+
+<span>
+    <strong>Damage Status:</strong>
+    {{ rental[12] }}
+</span>
+
+{% if rental[13] %}
+<span>
+    <strong>Damage Report:</strong>
+    {{ rental[13] }}
+</span>
+{% endif %}
+
+<span>
+    <strong>Damage Charge:</strong>
+    ¥{{ "%.2f"|format(rental[14] or 0) }}
+</span>
+
+{% if rental[7] == "Settled" %}
+
+{% set refund_received = (rental[11] or 0) - (rental[14] or 0) %}
+
+<span>
+    <strong>Refund Received:</strong>
+    ¥{{ "%.2f"|format(refund_received if refund_received > 0 else 0) }}
+</span>
+
+<span>
+    ✅ Damage settlement completed.
+</span>
+
+{% endif %}
+{% endif %}
 <span>
     <strong>Payment:</strong>
     {{ rental[6] }}
@@ -117,24 +160,15 @@
         type="submit"
         class="dashboard-main-button"
         onclick="return confirm('Confirm payment for this rental?');"
-    >
-        💳 Pay Now
-    </button>
+  >
+    💳 Pay Now
+</button>
 </form>
 
 {% elif rental[6] == "Paid" %}
 
-<p style="margin-top: 10px;">
-    ✅ Payment completed
-</p>
 
 {% endif %}
-<span>
-    <strong>Deposit:</strong>
-    {{ rental[7] }}
-</span>
-            </div>
-
 
             {% if rental[5] == "Approved" %}
 
