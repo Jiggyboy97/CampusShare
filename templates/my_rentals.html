@@ -31,7 +31,10 @@
         <a href="/list-item">List Item</a>
         <a href="/my-rentals">My Rentals</a>
         <a href="/requests">Requests</a>
-        <a href="/logout">Logout</a>
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+        </form>
     </nav>
 
 </header>
@@ -84,12 +87,14 @@
             <p>
                 <strong>Start Date:</strong>
                 {{ rental[3] }}
+                {% if rental[18] %}at {{ rental[18] }}{% endif %}
             </p>
 
 
             <p>
                 <strong>End Date:</strong>
                 {{ rental[4] }}
+                {% if rental[19] %}at {{ rental[19] }}{% endif %}
             </p>
 
 
@@ -131,7 +136,7 @@
 
             <!-- QR PAYMENT BUTTON -->
 
-            {% if rental[5] == "Approved"
+            {% if rental[5] in ("Approved", "Overdue")
                 and rental[6] == "Unpaid"
             %}
 
@@ -168,12 +173,66 @@
 
             {% endif %}
 
+            {% if rental[7] == "Held" %}
 
             <p>
-                <strong>Damage Charge:</strong>
+                <strong>Proposed Damage Charge:</strong>
                 ¥{{ "%.2f"|format(rental[14] or 0) }}
             </p>
 
+            {% if rental[24] %}
+            <p>
+                <strong>Dispute Window Ends (UTC):</strong>
+                {{ rental[24] }}
+            </p>
+            {% endif %}
+
+            <p>
+                <strong>Dispute Status:</strong>
+                {{ rental[20] }}
+            </p>
+
+            {% if rental[20] == "Not Disputed" %}
+                {% if rental[25] %}
+                <form
+                    method="POST"
+                    action="{{ url_for('dispute_damage_report', request_id=rental[0]) }}"
+                    style="margin-top: 10px;"
+                >
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <textarea
+                        name="dispute_reason"
+                        maxlength="1000"
+                        placeholder="Explain why you dispute this damage report or charge..."
+                        required
+                        style="width: 100%; padding: 10px; margin-bottom: 10px;"
+                    ></textarea>
+                    <button type="submit" class="dashboard-main-button">
+                        Dispute Damage Report
+                    </button>
+                </form>
+                {% else %}
+                <p>The 48-hour damage review window has closed.</p>
+                {% endif %}
+            {% elif rental[20] == "Pending" %}
+            <p>
+                <strong>Your dispute:</strong>
+                {{ rental[21] }}
+            </p>
+            <p>The owner must resolve your dispute before the deposit is settled.</p>
+            {% elif rental[22] %}
+            <p>
+                <strong>Dispute Resolution:</strong>
+                {{ rental[22] }}
+            </p>
+            {% endif %}
+
+            {% else %}
+
+            <p>
+                <strong>Final Damage Charge:</strong>
+                ¥{{ "%.2f"|format(rental[14] or 0) }}
+            </p>
 
             {% if rental[7] == "Settled" %}
 
@@ -196,6 +255,8 @@
             <p>
                 ✅ Damage settlement completed.
             </p>
+
+            {% endif %}
 
             {% endif %}
 
@@ -257,12 +318,25 @@
 
             <!-- RENTAL STATUS -->
 
-            {% if rental[5] == "Approved" %}
+            {% if rental[5] in ("Approved", "Overdue") %}
 
             <p style="margin-top: 20px;">
+                {% if rental[5] == "Overdue" %}
+                ⚠️ Rental overdue. The agreed return date has passed.
+                {% else %}
                 ✅ Your request has been approved.
+                {% endif %}
             </p>
 
+            {% if rental[17] < 0 %}
+            <p><strong>⚠️ Return overdue by {{ -rental[17] }} day{% if rental[17] != -1 %}s{% endif %}.</strong></p>
+            {% elif rental[17] == 0 %}
+            <p><strong>⏰ Return due today.</strong></p>
+            {% elif rental[17] == 1 %}
+            <p><strong>⏰ Return due tomorrow.</strong></p>
+            {% else %}
+            <p><strong>⏰ Return due in {{ rental[17] }} days.</strong></p>
+            {% endif %}
 
             {% elif rental[5] == "Pending" %}
 
@@ -288,13 +362,13 @@
             {% if rental[10] == 1 %}
 
             <p>
-                ⭐ Rating submitted.
+                ⭐ You have reviewed the owner.
             </p>
 
             {% else %}
 
             <a
-                href="/rate/{{ rental[0] }}"
+                href="{{ url_for('rate_owner', request_id=rental[0]) }}"
                 class="dashboard-main-button"
             >
                 ⭐ Rate Owner

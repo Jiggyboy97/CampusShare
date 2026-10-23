@@ -31,7 +31,10 @@
         <a href="/browse">Browse</a>
         <a href="/list-item">List Item</a>
         <a href="/requests">Requests</a>
-        <a href="/logout">Logout</a>
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+        </form>
     </nav>
 
 </header>
@@ -80,11 +83,13 @@
                 <span>
                     <strong>Start Date:</strong>
                     {{ request[3] }}
+                    {% if request[15] %}at {{ request[15] }}{% endif %}
                 </span>
 
                 <span>
                     <strong>End Date:</strong>
                     {{ request[4] }}
+                    {% if request[16] %}at {{ request[16] }}{% endif %}
                 </span>
 
                 <span>
@@ -121,6 +126,65 @@
     {{ request[11] }}
 </span>
 {% endif %}
+{% if request[10] == "Damaged" and request[7] == "Held" %}
+<span>
+    <strong>Proposed Damage Charge:</strong>
+    ¥{{ "%.2f"|format(request[12] or 0) }}
+</span>
+<span>
+    <strong>Borrower Dispute:</strong>
+    {{ request[17] }}
+</span>
+{% if request[20] %}
+<span>
+    <strong>Dispute Window Ends (UTC):</strong>
+    {{ request[20] }}
+</span>
+{% endif %}
+{% if request[17] == "Pending" %}
+<p>
+    <strong>Borrower's explanation:</strong>
+    {{ request[18] }}
+</p>
+<form
+    method="POST"
+    action="{{ url_for('resolve_damage_dispute', request_id=request[0]) }}"
+    style="margin-top: 10px;"
+>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="damage-charge-resolution-{{ request[0] }}">Resolution</label>
+    <select
+        id="damage-charge-resolution-{{ request[0] }}"
+        name="resolution"
+        required
+        style="width: 100%; padding: 10px; margin-bottom: 10px;"
+    >
+        <option value="uphold">Uphold current charge</option>
+        <option value="revise">Revise charge</option>
+        <option value="cancel">Cancel charge</option>
+    </select>
+    <label for="revised-damage-charge-{{ request[0] }}">Revised charge (used only when revising)</label>
+    <input
+        id="revised-damage-charge-{{ request[0] }}"
+        type="number"
+        name="damage_charge"
+        min="0"
+        max="{{ request[8] or 0 }}"
+        step="0.01"
+        value="{{ request[12] or 0 }}"
+        style="width: 100%; padding: 10px; margin-bottom: 10px;"
+    >
+    <button type="submit" class="dashboard-main-button">
+        Resolve Dispute
+    </button>
+</form>
+{% elif request[19] %}
+<p>
+    <strong>Dispute Resolution:</strong>
+    {{ request[19] }}
+</p>
+{% endif %}
+{% endif %}
 {% if request[10] == "Damaged" and request[7] == "Settled" %}
 
 {% set refund_amount = (request[8] or 0) - (request[12] or 0) %}
@@ -140,7 +204,10 @@
 </p>
 
 {% endif %}
-{% if request[5] == "Completed" and request[7] == "Held" and request[10] == "Damaged" %}
+{% if request[5] == "Completed"
+    and request[7] == "Held"
+    and request[10] == "Damaged"
+    and request[21] %}
 
 <form
     method="POST"
@@ -157,9 +224,27 @@
     </button>
 </form>
 
+{% elif request[5] == "Completed"
+    and request[7] == "Held"
+    and request[10] == "Damaged"
+    and request[17] == "Pending" %}
+<p style="margin-top: 10px;">
+    Resolve the open dispute before settling this deposit.
+</p>
+
+{% elif request[5] == "Completed"
+    and request[7] == "Held"
+    and request[10] == "Damaged"
+    and request[20] %}
+<p style="margin-top: 10px;">
+    Settlement is available after the 48-hour review window.
+</p>
+
 {% endif %}
             </div>
-{% if request[5] == "Approved" and request[6] == "Paid" and request[7] == "Pending" %}
+{% if request[5] in ("Approved", "Overdue")
+    and request[6] == "Paid"
+    and request[7] == "Pending" %}
 
 <form
     method="POST"
@@ -289,10 +374,14 @@
     </button>
 </form>
 
-{% elif request[5] == "Approved" %}
+{% elif request[5] in ("Approved", "Overdue") %}
 
 <p>
+    {% if request[5] == "Overdue" %}
+    ⚠️ This rental is overdue. The agreed return date has passed.
+    {% else %}
     ✅ This rental is currently active.
+    {% endif %}
 </p>
 
 <form
@@ -313,6 +402,16 @@
 <p>
     ✅ Rental completed and equipment returned.
 </p>
+{% if request[14] %}
+<p>⭐ You have reviewed the borrower.</p>
+{% else %}
+<a
+    href="{{ url_for('rate_owner', request_id=request[0]) }}"
+    class="dashboard-main-button"
+>
+    ⭐ Rate Borrower
+</a>
+{% endif %}
 
 {% else %}
 

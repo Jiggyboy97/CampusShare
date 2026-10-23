@@ -25,7 +25,10 @@
             <a href="/students">Students</a>
             <a href="/notifications">Notifications</a>
             <a href="/requests">Requests</a>
-            <a href="/logout">Logout</a>
+            <form method="POST" action="/logout" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+            </form>
         </div>
     </nav>
 </header>
@@ -51,6 +54,30 @@
             See your latest CampusShare updates.
         </p>
 
+        <form
+            method="POST"
+            action="{{ url_for('update_notification_email_preference') }}"
+            style="margin-top: 20px;"
+        >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>
+                <input
+                    type="checkbox"
+                    name="notification_emails_enabled"
+                    value="1"
+                    {% if notification_emails_enabled %}checked{% endif %}
+                >
+                Email me when I receive CampusShare notifications
+            </label>
+            <p>
+                Email delivery requires a verified account address and
+                configured SMTP settings.
+            </p>
+            <button type="submit" class="secondary-button">
+                Save Email Preference
+            </button>
+        </form>
+
     </div>
 
     {% for notification in notifications %}
@@ -60,6 +87,7 @@
         padding: 22px;
         border-radius: 14px;
         margin-bottom: 18px;
+        {% if not notification[3] %}border-left: 5px solid #2563eb;{% endif %}
     ">
 
         <p style="
@@ -69,9 +97,26 @@
             {{ notification[1] }}
         </p>
 
+        <strong>
+            {% if notification[3] %}Read{% else %}Unread{% endif %}
+        </strong>
+
         <small>
             {{ notification[4] }}
         </small>
+
+        {% if not notification[3] %}
+        <form
+            method="POST"
+            action="{{ url_for('mark_notification_read', notification_id=notification[0]) }}"
+            style="margin-top: 15px;"
+        >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="secondary-button">
+                Mark as read
+            </button>
+        </form>
+        {% endif %}
 
         {% if notification[2] %}
 

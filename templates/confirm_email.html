@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm your email - CampusShare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dashboard-body">
+    <main class="error-container">
+        <p class="small-text">CAMPUSSHARE</p>
+        <h1>Confirm your email</h1>
+        <p>Confirm this email address to activate your CampusShare account.</p>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="dashboard-main-button" type="submit">
+                Confirm email
+            </button>
+        </form>
+    </main>
+</body>
+</html>

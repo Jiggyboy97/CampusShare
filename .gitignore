@@ -5,3 +5,7 @@ __pycache__/
 .venv/
 venv/campusshare.db
 backups/
+static/uploads/
+app_backup.py
+test_results.txt
+test_evidence_2026-10-21.txt

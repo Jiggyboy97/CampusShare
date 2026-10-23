@@ -34,13 +34,13 @@
         CampusShare
     </div>
 
-    <nav>
+    <nav aria-label="Main navigation">
 
         <a href="/">
             Home
         </a>
 
-        <a href="/browse">
+        <a href="/browse" aria-current="page">
             Browse
         </a>
 
@@ -76,13 +76,7 @@
 <form
     method="GET"
     action="/browse"
-    style="
-        margin-top: 25px;
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        flex-wrap: wrap;
-    "
+    class="browse-filters"
 >
 
     <input
@@ -90,21 +84,11 @@
         name="q"
         value="{{ search }}"
         placeholder="Search equipment..."
-        style="
-            padding: 12px;
-            width: 300px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-        "
+        class="browse-search"
     >
 
     <select
         name="category"
-        style="
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-        "
     >
 
         <option value="">
@@ -126,11 +110,6 @@
 
     <select
     name="status"
-    style="
-        padding: 12px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-    "
 >
 
     <option value="">
@@ -141,21 +120,21 @@
         value="Available"
         {% if status == "Available" %}selected{% endif %}
     >
-        🟢 Available
+        Available
     </option>
 
     <option
         value="Pending"
         {% if status == "Pending" %}selected{% endif %}
     >
-        🟡 Pending
+        Pending
     </option>
 
     <option
         value="Booked"
         {% if status == "Booked" %}selected{% endif %}
     >
-        🔴 Booked
+        Booked
     </option>
 
 </select>
@@ -163,7 +142,7 @@
         type="submit"
         class="dashboard-main-button"
     >
-        🔍 Search
+        Search
     </button>
 
 </form>
@@ -177,9 +156,14 @@
 
     <div class="equipment-card">
 
-        <div class="equipment-icon">
-            📦
-        </div>
+        {% if item[13] %}
+        <img class="equipment-photo"
+            src="{{ url_for('static', filename=item[13]) }}"
+            alt="Photo of {{ item[1] }}"
+        >
+        {% else %}
+        <div class="equipment-icon">📦</div>
+        {% endif %}
 
         <h2>{{ item[1] }}</h2>
 
@@ -205,7 +189,7 @@
 
             {% if item[5] == "Paid" %}
             <p>
-                ¥{{ item[6] }} / day
+                ¥{{ item[6] }} / {{ item[14] }}
             </p>
             {% endif %}
 

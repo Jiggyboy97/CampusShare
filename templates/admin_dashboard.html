@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrator - CampusShare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dashboard-body">
+    <header class="dashboard-navbar">
+        <div class="logo">CampusShare Administration</div>
+        <nav>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <form method="POST" action="{{ url_for('logout') }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+            </form>
+        </nav>
+    </header>
+
+    <main class="browse-container">
+        <h1>Administrator tools</h1>
+
+        <section>
+            <h2>Accounts</h2>
+            {% for user in users %}
+            <article class="equipment-card">
+                <h3>{{ user[1] }}{% if user[2] == "admin" %} (Administrator){% endif %}</h3>
+                {% if user[2] != "admin" %}
+                <p>Account status: {{ "Suspended" if user[3] else "Active" }}</p>
+                <form method="POST" action="{{ url_for('admin_update_suspension', user_id=user[0]) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="{{ 'restore' if user[3] else 'suspend' }}">
+                    <button class="secondary-button" type="submit">
+                        {{ "Restore account" if user[3] else "Suspend account" }}
+                    </button>
+                </form>
+                {% endif %}
+            </article>
+            {% else %}
+            <p>No accounts are available.</p>
+            {% endfor %}
+        </section>
+
+        <section>
+            <h2>Active listings</h2>
+            {% for listing in listings %}
+            <article class="equipment-card">
+                <h3>{{ listing[1] }}</h3>
+                <p>Owner: {{ listing[2] }} ({{ listing[3] }})</p>
+                <form method="POST" action="{{ url_for('admin_remove_listing', equipment_id=listing[0]) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="secondary-button" type="submit">Remove listing</button>
+                </form>
+            </article>
+            {% else %}
+            <p>No active listings.</p>
+            {% endfor %}
+        </section>
+
+        <section>
+            <h2>Open damage disputes</h2>
+            {% for dispute in disputes %}
+            <article class="equipment-card">
+                <h3>{{ dispute[1] }} — dispute #{{ dispute[0] }}</h3>
+                <p>Borrower: {{ dispute[2] }}; Owner: {{ dispute[3] }}</p>
+                <p><strong>Damage report:</strong> {{ dispute[4] }}</p>
+                <p><strong>Borrower’s dispute:</strong> {{ dispute[5] }}</p>
+                <p>Current charge: ¥{{ "%.2f"|format(dispute[6]) }}; held deposit: ¥{{ "%.2f"|format(dispute[7]) }}</p>
+                <form method="POST" action="{{ url_for('resolve_damage_dispute', request_id=dispute[0]) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label for="resolution-{{ dispute[0] }}">Resolution</label>
+                    <select id="resolution-{{ dispute[0] }}" name="resolution" required>
+                        <option value="uphold">Uphold charge</option>
+                        <option value="revise">Revise charge</option>
+                        <option value="cancel">Cancel charge</option>
+                    </select>
+                    <label for="damage-charge-{{ dispute[0] }}">Revised charge (¥)</label>
+                    <input
+                        id="damage-charge-{{ dispute[0] }}"
+                        type="number"
+                        name="damage_charge"
+                        min="0"
+                        max="{{ dispute[7] }}"
+                        step="0.01"
+                    >
+                    <button class="dashboard-main-button" type="submit">Resolve dispute</button>
+                </form>
+            </article>
+            {% else %}
+            <p>No open damage disputes.</p>
+            {% endfor %}
+        </section>
+    </main>
+</body>
+</html>

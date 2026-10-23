@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Email - CampusShare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<main class="register-container">
+    <h1>Check Your Inbox</h1>
+    <p class="register-text">
+        If an unverified account exists for that address, a new verification
+        link will be sent. Check your university inbox and spam folder.
+    </p>
+    <p class="login-link"><a href="{{ url_for('login') }}">Return to login</a></p>
+</main>
+</body>
+</html>

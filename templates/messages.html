@@ -31,7 +31,10 @@
             <a href="/my-listings">My Listings</a>
             <a href="/requests">Requests</a>
             <a href="/my-reviews">My Reviews</a>
-            <a href="/logout">Logout</a>
+            <form method="POST" action="/logout" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+            </form>
         </nav>
 
     </div>

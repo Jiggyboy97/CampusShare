@@ -34,9 +34,9 @@
         CampusShare
     </div>
 
-    <nav>
+    <nav aria-label="Main navigation">
 
-        <a href="/dashboard">
+        <a href="/dashboard" aria-current="page">
             Dashboard
         </a>
 
@@ -57,9 +57,13 @@
        <a href="/requests">Requests</a>
         
 <a href="/my-reviews">My Reviews</a>
-        <a href="/logout">
-            Logout
-        </a>
+        {% if session.get("user_role") == "admin" %}
+        <a href="{{ url_for('admin_dashboard') }}">Administrator</a>
+        {% endif %}
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+        </form>
 
     </nav>
 
@@ -78,7 +82,7 @@
 
         <h1>
             Welcome back,
-            {{ user_name }} 👋
+            {{ user_name }}
         </h1>
 
         <p>
@@ -103,7 +107,7 @@
 
     <div class="stat-card">
 
-        <span>🔍</span>
+        <span aria-hidden="true">01</span>
 
         <div>
             <h2>
@@ -120,7 +124,7 @@
 
     <div class="stat-card">
 
-        <span>📦</span>
+        <span aria-hidden="true">02</span>
 
         <div>
             <h2>{{ my_borrowings }}</h2>
@@ -132,7 +136,7 @@
 
     <div class="stat-card">
 
-        <span>📝</span>
+        <span aria-hidden="true">03</span>
 
         <div>
             <h2>
@@ -147,7 +151,7 @@
 
     <div class="stat-card">
 
-        <span>⭐</span>
+        <span aria-hidden="true">04</span>
 
         <div>
             <h2>{% if my_rating %}
@@ -155,7 +159,7 @@
 {% else %}
     —
 {% endif %}</h2>
-            <p>My Rating</p>
+            <p>Average Rating</p>
         </div>
 
     </div>
@@ -171,7 +175,7 @@
 
         <div class="action-card">
 
-            <span>🔎</span>
+            <span aria-hidden="true">01</span>
 
             <h3>
                 Browse Equipment
@@ -191,7 +195,7 @@
 
         <div class="action-card">
 
-            <span>➕</span>
+            <span aria-hidden="true">02</span>
 
             <h3>
                 List Equipment
@@ -211,7 +215,7 @@
 
         <div class="action-card">
 
-            <span>📅</span>
+            <span aria-hidden="true">03</span>
 
             <h3>
                 My Bookings
@@ -220,18 +224,15 @@
             <p>
                 Check active and upcoming
                 rentals.
-            </div>
+            </p>
 
-<p>
-    Check active and upcoming
-    rentals.
-</p>
+            <a href="/my-rentals">
+                View Bookings
+            </a>
 
-<a href="/my-rentals">
-    View Bookings
-</a>
+        </div>
 
-</div>
+    </div>
 
 </section>
 
@@ -244,7 +245,7 @@
 
         <div class="trust-card">
 
-            <span>✅</span>
+            <span aria-hidden="true">01</span>
 
             <h3>
                 Student Verification
@@ -260,7 +261,7 @@
 
         <div class="trust-card">
 
-            <span>📸</span>
+            <span aria-hidden="true">02</span>
 
             <h3>
                 Item Condition
@@ -276,7 +277,7 @@
 
         <div class="trust-card">
 
-            <span>⚠️</span>
+            <span aria-hidden="true">03</span>
 
             <h3>
                 Report a Problem

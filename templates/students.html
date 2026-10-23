@@ -25,7 +25,10 @@
             <a href="/list-item">List Item</a>
             <a href="/students">Students</a>
             <a href="/requests">Requests</a>
-            <a href="/logout">Logout</a>
+            <form method="POST" action="/logout" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+            </form>
         </div>
     </nav>
 </header>

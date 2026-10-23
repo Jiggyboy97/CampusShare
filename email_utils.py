@@ -4,7 +4,7 @@ import smtplib
 import ssl
 
 
-def send_password_reset_email(recipient, reset_url):
+def _send_email(recipient, subject, body):
     host = os.environ.get("CAMPUSSHARE_SMTP_HOST", "").strip()
     sender = os.environ.get("CAMPUSSHARE_SMTP_FROM", "").strip()
     username = os.environ.get("CAMPUSSHARE_SMTP_USERNAME", "").strip()
@@ -33,14 +33,10 @@ def send_password_reset_email(recipient, reset_url):
         raise RuntimeError("CAMPUSSHARE_SMTP_PORT must be between 1 and 65535.")
 
     message = EmailMessage()
-    message["Subject"] = "Reset your CampusShare password"
+    message["Subject"] = subject
     message["From"] = sender
     message["To"] = recipient
-    message.set_content(
-        "We received a request to reset your CampusShare password.\n\n"
-        f"Use this link within 30 minutes:\n{reset_url}\n\n"
-        "If you did not request a password reset, you can ignore this email."
-    )
+    message.set_content(body)
 
     timeout = 15
     if security == "ssl":
@@ -61,3 +57,33 @@ def send_password_reset_email(recipient, reset_url):
             if username:
                 smtp.login(username, password)
             smtp.send_message(message)
+
+
+def send_password_reset_email(recipient, reset_url):
+    _send_email(
+        recipient,
+        "Reset your CampusShare password",
+        "We received a request to reset your CampusShare password.\n\n"
+        f"Use this link within 30 minutes:\n{reset_url}\n\n"
+        "If you did not request a password reset, you can ignore this email.",
+    )
+
+
+def send_verification_email(recipient, verification_url):
+    _send_email(
+        recipient,
+        "Verify your CampusShare email",
+        "Welcome to CampusShare.\n\n"
+        "Verify your email address within 24 hours by opening this link:\n"
+        f"{verification_url}\n\n"
+        "If you did not create this account, you can ignore this email.",
+    )
+
+
+def send_notification_email(recipient, notification_text):
+    _send_email(
+        recipient,
+        "CampusShare notification",
+        f"You have a new CampusShare notification:\n\n{notification_text}\n\n"
+        "Sign in to CampusShare to view your notifications.",
+    )
