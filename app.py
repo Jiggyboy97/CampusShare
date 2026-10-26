@@ -4,7 +4,7 @@ import os
 import sys
 from urllib.parse import urlsplit, urlunsplit
 from datetime import timedelta
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, session
 from flask_wtf.csrf import CSRFError, CSRFProtect
 from itsdangerous import URLSafeTimedSerializer
 
@@ -87,7 +87,62 @@ app.config["ADMIN_EMAILS"] = {
     ).split(",")
     if email.strip()
 }
+@app.context_processor
+def inject_unread_notification_count():
+    user_id = session.get("user_id")
 
+    if not user_id:
+        return {"unread_notification_count": 0}
+
+    connection = connect_database(DATABASE)
+
+    try:
+        result = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM notifications
+            WHERE user_id = ?
+            AND COALESCE(is_read, 0) = 0
+            """,
+            (user_id,)
+        ).fetchone()
+
+        unread_count = result[0]
+
+    finally:
+        connection.close()
+
+    return {
+        "unread_notification_count": unread_count
+    }
+# Count unread private messages
+@app.context_processor
+def inject_unread_message_count():
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return {"unread_message_count": 0}
+
+    connection = connect_database(DATABASE)
+
+    try:
+        result = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM messages
+            WHERE receiver_id = ?
+              AND is_read = 0
+            """,
+            (user_id,)
+        ).fetchone()
+
+        return {
+            "unread_message_count": result[0] if result else 0
+        }
+
+    finally:
+        connection.close()
 CSRFProtect(app)
 @app.before_request
 def enforce_https():

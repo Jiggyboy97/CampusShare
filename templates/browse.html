@@ -156,15 +156,59 @@
 
     <div class="equipment-card">
 
-        {% if item[13] %}
-        <img class="equipment-photo"
-            src="{{ url_for('static', filename=item[13]) }}"
-            alt="Photo of {{ item[1] }}"
-        >
-        {% else %}
-        <div class="equipment-icon">📦</div>
-        {% endif %}
+    {% if item[13] %}
 
+    <img
+        class="equipment-photo"
+        src="{{ url_for('static', filename=item[13]) }}"
+        alt="Photo of {{ item[1] }}"
+    >
+
+{% elif 'macbook pro m1' in (item[1]|lower) %}
+
+    <img
+        class="equipment-photo"
+        src="{{ url_for('static', filename='images/macbook_pro_m1.jpg') }}"
+        alt="MacBook Pro M1"
+    >
+
+{% elif 'introduction to mathematics' in (item[1]|lower) %}
+
+    <img
+        class="equipment-photo"
+        src="{{ url_for('static', filename='images/mathematics_book.jpg') }}"
+        alt="Mathematics Textbook"
+    >
+
+{% elif (item[2]|lower) == 'calculator' %}
+
+    <img
+        class="equipment-photo"
+        src="{{ url_for('static', filename='images/calculator.jpg') }}"
+        alt="Calculator"
+    >
+
+{% elif 'drone' in (item[1]|lower) %}
+
+    <img
+        class="equipment-photo"
+        src="{{ url_for('static', filename='images/drone.jpg') }}"
+        alt="Drone"
+    >
+
+{% elif 'camera' in (item[1]|lower) %}
+
+    <img
+        class="equipment-photo"
+        src="{{ url_for('static', filename='images/canon_eos_camera.jpg') }}"
+        alt="Canon EOS Camera"
+    >
+
+{% else %}
+
+    <div class="equipment-icon">📦</div>
+
+{% endif %}
         <h2>{{ item[1] }}</h2>
 
         <p class="equipment-category">
@@ -212,6 +256,8 @@
 
                 {% elif item[12] == "Booked" %}
                     🔴 Booked
+{% elif item[12] == "Expired" %}
+    🔴 Expired
 
                 {% endif %}
             </p>

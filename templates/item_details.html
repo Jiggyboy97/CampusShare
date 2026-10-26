@@ -132,7 +132,14 @@
             <strong>Owner:</strong>
             {{ item[14] }}
         </p>
-
+{% if session.get("user_id") and session.get("user_id") != item[1] %}
+    <a
+        href="{{ url_for('chat', student_id=item[1]) }}"
+        class="dashboard-main-button"
+    >
+        💬 Message Owner
+    </a>
+{% endif %}
     </div>
 
 
@@ -149,7 +156,12 @@
             </p>
         </div>
     {% endif %}
-
+{% if item[10] and item[10] < today %}
+    <p class="field-error" role="alert">
+        This equipment is no longer available for borrowing.
+        Please browse other equipment.
+    </p>
+{% else %}
     <h2>Request This Equipment</h2>
 
     <form
@@ -223,7 +235,7 @@
             </button>
 
     </form>
-
+{% endif %}
 {% endif %}
        
 
@@ -315,7 +327,7 @@
                 + `${billableUnits === 1 ? "" : "s"} × ${formatEstimate(price)}). `
                 + "The security deposit is not included.";
         };
-        if (rentalStart && rentalEnd) {
+        if (rentalForm && rentalStart && rentalEnd) {
             const updateRentalDates = () => {
                 const minimumStartDate = "{{ [today, item[9]]|max }}";
                 const maximumDate = "{{ item[10] }}";
@@ -324,11 +336,9 @@
                 const minimumEndDate = rentalStart.value || minimumStartDate;
                 rentalEnd.min = minimumEndDate;
                 rentalEnd.max = maximumDate;
-                {% if item[13] == "hour" %}
-                if (rentalStart.value) {
-                    rentalEnd.value = rentalStart.value;
-                }
-                {% endif %}
+              if (rentalForm.dataset.priceUnit === "hour" && rentalStart.value) {
+    rentalEnd.value = rentalStart.value;
+}
                 document.getElementById("start_date_error").textContent =
                     rentalStart.value && (
                         rentalStart.value < minimumStartDate

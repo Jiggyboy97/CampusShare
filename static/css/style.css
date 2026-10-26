@@ -1181,3 +1181,60 @@ footer {
         transition-duration: 0.01ms !important;
     }
 }
+/* CampusShare Notification Bell */
+
+.notification-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.notification-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    background-color: #dc2626;
+    color: white;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+}
+/* CAMPUSSHARE DESKTOP NAVIGATION FIX */
+
+@media (min-width: 768px) {
+
+    .dashboard-navbar {
+        padding: 14px 24px;
+        gap: 16px;
+    }
+
+    .dashboard-navbar .logo {
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .dashboard-navbar nav {
+        display: flex;
+        flex: 1;
+        justify-content: flex-end;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .dashboard-navbar nav a,
+    .dashboard-navbar nav button {
+        font-size: 13px;
+        white-space: nowrap;
+        padding: 9px 6px;
+    }
+
+    .dashboard-navbar .notification-nav-link {
+        gap: 4px;
+    }
+}

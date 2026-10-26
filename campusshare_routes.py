@@ -782,6 +782,10 @@ def dashboard():
         SELECT COUNT(*)
         FROM equipment
         WHERE equipment.is_removed = 0
+        AND (
+    equipment.available_until IS NULL
+    OR date(equipment.available_until) >= date('now', 'localtime')
+)
         AND NOT EXISTS (
             SELECT 1
             FROM borrowing_requests
@@ -1030,14 +1034,18 @@ def browse():
                 equipment.available_until,
                 equipment.location,
                 users.name,
-                CASE
-                    WHEN EXISTS (
-                        SELECT 1
-                        FROM borrowing_requests
-                        WHERE borrowing_requests.equipment_id = equipment.id
-                        AND borrowing_requests.status IN ('Approved', 'Overdue')
-                    )
-                    THEN 'Booked'
+             CASE
+    WHEN equipment.available_until IS NOT NULL
+         AND date(equipment.available_until) < date('now', 'localtime')
+    THEN 'Expired'
+
+    WHEN EXISTS (
+        SELECT 1
+        FROM borrowing_requests
+        WHERE borrowing_requests.equipment_id = equipment.id
+        AND borrowing_requests.status IN ('Approved', 'Overdue')
+    )
+    THEN 'Booked'
                     WHEN EXISTS (
                         SELECT 1
                         FROM borrowing_requests
@@ -2399,6 +2407,39 @@ def students():
     return render_template(
         "students.html",
         students=students_list
+    )
+# MESSAGE BORROWER
+@app.route("/requests/<int:request_id>/message-borrower")
+def message_request_borrower(request_id):
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    owner_id = session["user_id"]
+
+    connection = connect_database(application.DATABASE)
+
+    try:
+        borrower = connection.execute(
+            """
+            SELECT borrowing_requests.borrower_id
+            FROM borrowing_requests
+            JOIN equipment
+                ON borrowing_requests.equipment_id = equipment.id
+            WHERE borrowing_requests.id = ?
+              AND equipment.owner_id = ?
+            """,
+            (request_id, owner_id)
+        ).fetchone()
+
+    finally:
+        connection.close()
+
+    if borrower is None:
+        return "Borrowing request not found.", 404
+
+    return redirect(
+        url_for("chat", student_id=borrower[0])
     )
 @app.route("/chat/<int:student_id>", methods=["GET", "POST"])
 def chat(student_id):

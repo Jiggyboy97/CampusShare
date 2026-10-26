@@ -43,8 +43,23 @@
         <a href="/browse">
             Browse
         </a>
-        <a href="/notifications">Notifications</a>
-<a href="/messages">Messages</a>
+        <a href="/notifications" class="notification-nav-link">
+    🔔 Notifications
+
+    {% if unread_notification_count|default(0) > 0 %}
+        <span class="notification-badge">
+            {{ unread_notification_count }}
+        </span>
+    {% endif %}
+</a>
+<a href="/messages" class="notification-nav-link">
+    💬 Messages
+    {% if unread_message_count|default(0) > 0 %}
+        <span class="notification-badge">
+            {{ unread_message_count }}
+        </span>
+    {% endif %}
+</a>
         <a href="/list-item">
             List Item
         </a>
