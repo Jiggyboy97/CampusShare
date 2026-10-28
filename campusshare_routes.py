@@ -1452,6 +1452,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 # APPROVE REQUEST
 # =====================================================
 
+
+# =====================================================
+# CONFIRM EQUIPMENT HANDOVER
+# =====================================================
+
 @app.route(
     "/requests/<int:request_id>/approve",
     methods=["POST"]
@@ -1460,14 +1465,7 @@ def approve_request(request_id):
 
     if "user_id" not in session:
         return redirect(url_for("login"))
-    # Temporarily block approval until the new
-    # meetup, inspection, and payment workflow is ready.
-    return error_response(
-        "Approval requires meetup verification, "
-        "equipment inspection, and payment.",
-        409,
-        "Approval not available yet",
-    )
+
     connection = connect_database(application.DATABASE)
 
     request_data = connection.execute(
@@ -1480,11 +1478,16 @@ def approve_request(request_id):
         FROM borrowing_requests
 
         JOIN equipment
-        ON borrowing_requests.equipment_id = equipment.id
+            ON borrowing_requests.equipment_id = equipment.id
 
         WHERE borrowing_requests.id = ?
-        AND equipment.owner_id = ?
-        AND borrowing_requests.status = 'Pending'
+          AND equipment.owner_id = ?
+          AND borrowing_requests.status = 'Pending'
+          AND borrowing_requests.payment_status = 'Paid'
+          AND borrowing_requests.meetup_status = 'Confirmed'
+          AND borrowing_requests.meetup_owner_verified_at IS NOT NULL
+          AND borrowing_requests.meetup_borrower_verified_at IS NOT NULL
+          AND borrowing_requests.inspection_rejected_at IS NULL
         """,
         (
             request_id,
@@ -1493,49 +1496,68 @@ def approve_request(request_id):
     ).fetchone()
 
     if request_data is None:
-
         connection.close()
 
         return error_response(
-            "Pending request not found or you are not the owner.",
-            404,
-            "Request unavailable",
+            "Handover requires both inspection approvals "
+            "and completed demo payment. Only the equipment "
+            "owner can confirm handover.",
+            409
         )
 
     cursor = connection.execute(
         """
         UPDATE borrowing_requests
+
         SET status = 'Approved'
+
         WHERE id = ?
           AND status = 'Pending'
+          AND payment_status = 'Paid'
+          AND meetup_status = 'Confirmed'
+          AND meetup_owner_verified_at IS NOT NULL
+          AND meetup_borrower_verified_at IS NOT NULL
+          AND inspection_rejected_at IS NULL
+          AND EXISTS (
+              SELECT 1
+              FROM equipment
+              WHERE equipment.id = borrowing_requests.equipment_id
+                AND equipment.owner_id = ?
+          )
         """,
-        (request_id,)
+        (
+            request_id,
+            session["user_id"]
+        )
     )
+
     if cursor.rowcount != 1:
         connection.close()
-        return error_response("This request is no longer pending.", 409)
+
+        return error_response(
+            "This rental is not eligible for handover.",
+            409
+        )
+
     add_notification(
         connection,
         request_data[1],
-        f"Your request for {request_data[2]} was approved.",
-        url_for("my_rentals"),
+        f"The owner confirmed the equipment handover "
+        f"for {request_data[2]}.",
+        url_for("my_rentals")
     )
 
     connection.commit()
     connection.close()
+
     log_security_event(
-        "rental_approved",
+        "rental_handover_confirmed",
         actor_id=session["user_id"],
-        request_id=request_id,
+        request_id=request_id
     )
 
-    return redirect(
-        url_for("owner_requests")
-    )
+    return redirect(url_for("owner_requests"))
 
-# =====================================================
-# SCHEDULE EQUIPMENT MEETUP
-# =====================================================
 
 @app.route(
     "/requests/<int:request_id>/schedule-meetup",
@@ -1635,9 +1657,6 @@ def schedule_meetup(request_id):
 
     return redirect(url_for("owner_requests"))
 
-# =====================================================
-# BORROWER CONFIRMS MEETUP
-# =====================================================
 
 @app.route(
     "/requests/<int:request_id>/confirm-meetup",
@@ -1797,16 +1816,18 @@ def upload_pickup_inspection_photo(request_id):
             WHERE id = ?
               AND borrower_id = ?
               AND status = 'Pending'
-            
+
               AND meetup_status = 'Confirmed'
               AND meetup_at IS NOT NULL
               AND meetup_at <= ?
             """,
-            (
-                request_id,
-                                  "Pickup photos can only be uploaded by the borrower "
-                    "after the confirmed meetup time.",
-            )
+
+(
+    request_id,
+    session["user_id"],
+    datetime.now().strftime("%Y-%m-%dT%H:%M")
+)
+
         ).fetchone()
 
 
@@ -2105,6 +2126,7 @@ def reject_request(request_id):
         WHERE borrowing_requests.id = ?
         AND equipment.owner_id = ?
         AND borrowing_requests.status = 'Pending'
+        AND borrowing_requests.payment_status = 'Unpaid'
         """,
         (
             request_id,
@@ -2128,6 +2150,7 @@ def reject_request(request_id):
         SET status = 'Rejected'
         WHERE id = ?
           AND status = 'Pending'
+            AND payment_status = 'Unpaid'
         """,
         (request_id,)
     )
@@ -2219,7 +2242,12 @@ END AS damage_dispute_window_open,
 borrowing_requests.meetup_status,
 borrowing_requests.meetup_at,
 borrowing_requests.meetup_location,
-equipment.image_path
+
+equipment.image_path,
+borrowing_requests.meetup_owner_verified_at,
+borrowing_requests.meetup_borrower_verified_at,
+borrowing_requests.inspection_rejected_at
+
 FROM borrowing_requests
 
         JOIN equipment
@@ -2235,7 +2263,7 @@ FROM borrowing_requests
         (session["user_id"], session["user_id"])
     ).fetchall()
 
-   
+
     # =============================================
     # GET INSPECTION PHOTOS FOR MY RENTALS
     # =============================================
@@ -2959,7 +2987,7 @@ def owner_requests():
                  AND borrowing_requests.damage_dispute_status != 'Pending'
                 THEN 1
                 ELSE 0
-           
+
 END AS damage_settlement_allowed,
 borrowing_requests.meetup_status,
 borrowing_requests.meetup_at,
@@ -2969,7 +2997,7 @@ borrowing_requests.meetup_owner_verified_at,
 borrowing_requests.meetup_borrower_verified_at
 
 FROM borrowing_requests
- 
+
         JOIN equipment
             ON borrowing_requests.equipment_id = equipment.id
         JOIN users
@@ -2979,7 +3007,7 @@ FROM borrowing_requests
         """,
         (session["user_id"],)
     ).fetchall()
-   
+
     # =============================================
     # GET INSPECTION PHOTOS FOR EQUIPMENT OWNERS
     # =============================================
@@ -3557,7 +3585,15 @@ def qr_payment(request_id):
             borrowing_requests.payment_status,
             borrowing_requests.total_price,
             equipment.item_name,
-            users.name
+
+users.name,
+borrowing_requests.meetup_owner_verified_at,
+borrowing_requests.meetup_borrower_verified_at,
+
+borrowing_requests.inspection_rejected_at,
+equipment.deposit
+
+
 
         FROM borrowing_requests
 
@@ -3580,9 +3616,24 @@ def qr_payment(request_id):
     if rental[1] != session["user_id"]:
         return error_response("You cannot pay for this rental.", 403)
 
-    if rental[2] not in {"Approved", "Overdue"}:
+
+    inspection_approved = (
+        rental[2] == "Pending"
+        and rental[7] is not None
+        and rental[8] is not None
+        and rental[9] is None
+    )
+
+    existing_approved = (
+        rental[2] in {"Approved", "Overdue"}
+        and rental[9] is None
+    )
+
+    if not (inspection_approved or existing_approved):
         return error_response(
-            "This rental must be approved before payment.", 400
+            "Both students must accept the equipment "
+            "inspection before proceeding to payment.",
+            400
         )
 
     if rental[3] == "Paid":
@@ -3665,27 +3716,184 @@ def qr_payment_image(token):
 
 
 # =====================================================
+# READ-ONLY QR PAYMENT PREVIEW
+# =====================================================
+
+@app.route("/qr-payment/demo-preview/<int:request_id>")
+def qr_demo_preview(request_id):
+    import base64
+    from flask import render_template_string
+
+    borrower_id = session.get("user_id")
+
+    if borrower_id is None:
+        return redirect(url_for("login"))
+
+    connection = connect_database(application.DATABASE)
+
+    try:
+        rental = connection.execute(
+            """
+            SELECT
+                equipment.item_name,
+                borrowing_requests.total_price,
+                equipment.deposit
+            FROM borrowing_requests
+            JOIN equipment
+                ON borrowing_requests.equipment_id = equipment.id
+            WHERE borrowing_requests.id = ?
+              AND borrowing_requests.borrower_id = ?
+            """,
+            (request_id, borrower_id)
+        ).fetchone()
+    finally:
+        connection.close()
+
+    if rental is None:
+        return error_response("Rental not found.", 404)
+
+    preview_url = url_for(
+        "qr_demo_preview",
+        request_id=request_id,
+        _external=True
+    )
+
+    image_buffer = io.BytesIO()
+
+    qr = qrcode.make(preview_url)
+    qr.save(image_buffer, format="PNG")
+
+    qr_image = base64.b64encode(
+        image_buffer.getvalue()
+    ).decode("ascii")
+
+    return render_template_string(
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name="viewport"
+                  content="width=device-width, initial-scale=1">
+            <title>CampusShare QR Payment Preview</title>
+        </head>
+
+        <body style="
+            font-family: Arial;
+            background: #f5f7fa;
+            padding: 25px;
+            text-align: center;
+        ">
+
+        <div style="
+            background: white;
+            max-width: 450px;
+            margin: auto;
+            padding: 25px;
+            border-radius: 12px;
+        ">
+
+            <h2>CampusShare QR Payment Preview</h2>
+
+            <h3>{{ item_name }}</h3>
+
+            <p>
+                <strong>Rental Fee:</strong>
+                &yen;{{ "%.2f"|format(fee or 0) }}
+            </p>
+
+            <p>
+                <strong>Refundable Security Deposit:</strong>
+                &yen;{{ "%.2f"|format(deposit or 0) }}
+            </p>
+
+            <hr>
+
+            <h3>Scan QR Code</h3>
+
+            <img
+                src="data:image/png;base64,{{ qr_image }}"
+                alt="Demo QR Code"
+                style="width: 260px; max-width: 100%;"
+            >
+
+            <p>
+                Scan this QR code with your phone
+                to open the preview page.
+            </p>
+
+            <p style="color: #b45309;">
+                DEMO PREVIEW ONLY
+            </p>
+
+            <p style="font-size: 13px; color: #666;">
+                No real payment will be made.
+                This preview does not change
+                the rental payment status.
+            </p>
+
+            <a href="{{ url_for('my_rentals') }}">
+                Back to My Rentals
+            </a>
+
+        </div>
+        </body>
+        </html>
+        """,
+        item_name=rental[0],
+        fee=rental[1],
+        deposit=rental[2],
+        qr_image=qr_image
+    )
+
+
+# =====================================================
 # QR PAYMENT CONFIRMATION
 # =====================================================
 
-@app.route(
-    "/qr-payment/confirm/<token>",
-    methods=["GET", "POST"]
-)
-def qr_payment_confirm(token):
+"""
+            UPDATE borrowing_requests
+            SET payment_status = 'Paid'
+            WHERE id = ?
+            AND borrower_id = ?
+            AND payment_status = 'Unpaid'
 
+inspection_approved = (
+    rental[2] == "Pending"
+    and rental[9] is not None
+    and rental[10] is not None
+    and rental[11] is None
+)
+
+existing_approved = (
+    rental[2] in {"Approved", "Overdue"}
+    and rental[11] is None
+)
+
+if not (inspection_approved or existing_approved):
+    connection.close()
+    return error_response(
+        "Both students must accept the equipment inspection before payment.",
+        400
+    )
+
+
+        cursor = connection.execute(
+            """
+
+@app.route("/qr-payment/confirm/<token>", methods=["GET", "POST"])
+def qr_payment_confirm(token):
     try:
         payment_data = serializer.loads(
             token,
             salt="qr-payment-salt",
             max_age=600
         )
-
     except SignatureExpired:
         return error_response(
-            "This QR payment code has expired.", 400, "QR code expired"
+            "This QR payment code has expired.",
+            400,
+            "QR code expired"
         )
-
     except BadSignature:
         return error_response("Invalid QR payment code.", 400)
 
@@ -3705,19 +3913,17 @@ def qr_payment_confirm(token):
             equipment.item_name,
             owner.name,
             equipment.owner_id,
-            borrower.name
-
+            borrower.name,
+            borrowing_requests.meetup_owner_verified_at,
+            borrowing_requests.meetup_borrower_verified_at,
+            borrowing_requests.inspection_rejected_at
         FROM borrowing_requests
-
         JOIN equipment
-        ON borrowing_requests.equipment_id = equipment.id
-
+            ON borrowing_requests.equipment_id = equipment.id
         JOIN users AS owner
-        ON equipment.owner_id = owner.id
-
+            ON equipment.owner_id = owner.id
         JOIN users AS borrower
-        ON borrowing_requests.borrower_id = borrower.id
-
+            ON borrowing_requests.borrower_id = borrower.id
         WHERE borrowing_requests.id = ?
         """,
         (request_id,)
@@ -3725,7 +3931,9 @@ def qr_payment_confirm(token):
 
     if rental is None:
         connection.close()
-        return error_response("Rental not found.", 404, "Rental unavailable")
+        return error_response(
+            "Rental not found.", 404, "Rental unavailable"
+        )
 
     if rental[1] != borrower_id:
         connection.close()
@@ -3733,7 +3941,6 @@ def qr_payment_confirm(token):
 
     if rental[3] == "Paid":
         connection.close()
-
         return render_template(
             "qr_payment_confirm.html",
             rental=rental,
@@ -3741,11 +3948,24 @@ def qr_payment_confirm(token):
         )
 
     if request.method == "POST":
+        inspection_approved = (
+            rental[2] == "Pending"
+            and rental[9] is not None
+            and rental[10] is not None
+            and rental[11] is None
+        )
 
-        if rental[2] not in {"Approved", "Overdue"}:
+        existing_approved = (
+            rental[2] in {"Approved", "Overdue"}
+            and rental[11] is None
+        )
+
+        if not (inspection_approved or existing_approved):
             connection.close()
             return error_response(
-                "The rental is not approved for payment.", 400
+                "Both students must accept the equipment "
+                "inspection before payment.",
+                400
             )
 
         cursor = connection.execute(
@@ -3753,24 +3973,34 @@ def qr_payment_confirm(token):
             UPDATE borrowing_requests
             SET payment_status = 'Paid'
             WHERE id = ?
-            AND borrower_id = ?
-            AND payment_status = 'Unpaid'
-            AND status IN ('Approved', 'Overdue')
+              AND borrower_id = ?
+              AND payment_status = 'Unpaid'
+              AND inspection_rejected_at IS NULL
+              AND (
+                  status IN ('Approved', 'Overdue')
+                  OR (
+                      status = 'Pending'
+                      AND meetup_status = 'Confirmed'
+                      AND meetup_owner_verified_at IS NOT NULL
+                      AND meetup_borrower_verified_at IS NOT NULL
+                  )
+              )
             """,
-            (
-                request_id,
-                borrower_id
-            )
+            (request_id, borrower_id)
         )
+
         if cursor.rowcount != 1:
             connection.close()
-            return error_response("This rental payment is no longer pending.", 409)
+            return error_response(
+                "This rental payment is no longer pending.",
+                409
+            )
 
         add_notification(
             connection,
             rental[7],
             f"{rental[8]} paid for the rental of {rental[5]}.",
-            url_for("owner_requests"),
+            url_for("owner_requests")
         )
 
         connection.commit()
@@ -3791,9 +4021,12 @@ def qr_payment_confirm(token):
     )
 
 
+# =====================================================
+# PAY LATE FEE
+# =====================================================
+
 @app.route("/pay-late-fee/<int:request_id>", methods=["POST"])
 def pay_late_fee(request_id):
-
     if "user_id" not in session:
         return redirect(url_for("login"))
 
@@ -3801,7 +4034,11 @@ def pay_late_fee(request_id):
 
     rental = connection.execute(
         """
-        SELECT borrower_id, status, late_fee, late_fee_status
+        SELECT
+            borrower_id,
+            status,
+            late_fee,
+            late_fee_status
         FROM borrowing_requests
         WHERE id = ?
         """,
@@ -3814,21 +4051,27 @@ def pay_late_fee(request_id):
 
     if rental[0] != session["user_id"]:
         connection.close()
-        return error_response("You cannot pay this late fee.", 403)
+        return error_response(
+            "You cannot pay this late fee.", 403
+        )
 
     if rental[1] != "Completed":
         connection.close()
-        return error_response("The rental must be completed first.", 400)
+        return error_response(
+            "The rental must be completed first.", 400
+        )
 
     if float(rental[2] or 0) <= 0:
         connection.close()
-        return error_response("There is no late fee to pay.", 400)
+        return error_response(
+            "There is no late fee to pay.", 400
+        )
 
     if rental[3] == "Paid":
         connection.close()
         return redirect(url_for("my_rentals"))
 
-    connection.execute(
+    cursor = connection.execute(
         """
         UPDATE borrowing_requests
         SET late_fee_status = 'Paid'
@@ -3840,19 +4083,29 @@ def pay_late_fee(request_id):
         (request_id, session["user_id"])
     )
 
+    if cursor.rowcount != 1:
+        connection.close()
+        return error_response(
+            "This late fee is no longer pending.", 409
+        )
+
     connection.commit()
     connection.close()
 
     return redirect(url_for("my_rentals"))
 
 
+# =====================================================
+# CONFIRM DEPOSIT
+# =====================================================
+
 @app.route("/confirm-deposit/<int:request_id>", methods=["POST"])
 def confirm_deposit(request_id):
-
     if "user_id" not in session:
         return redirect(url_for("login"))
 
     connection = connect_database(application.DATABASE)
+
     rental = connection.execute(
         """
         SELECT
@@ -3861,27 +4114,38 @@ def confirm_deposit(request_id):
             borrowing_requests.payment_status,
             borrowing_requests.deposit_status
         FROM borrowing_requests
-        JOIN equipment ON borrowing_requests.equipment_id = equipment.id
+        JOIN equipment
+            ON borrowing_requests.equipment_id = equipment.id
         WHERE borrowing_requests.id = ?
         """,
-        (request_id,),
+        (request_id,)
     ).fetchone()
 
     if rental is None:
         connection.close()
-        return error_response("Rental not found.", 404, "Rental unavailable")
+        return error_response(
+            "Rental not found.", 404, "Rental unavailable"
+        )
+
     if rental[0] != session["user_id"]:
         connection.close()
-        return error_response("You cannot confirm this deposit.", 403)
+        return error_response(
+            "You cannot confirm this deposit.", 403
+        )
+
     if rental[1] not in {"Approved", "Overdue"} or rental[2] != "Paid":
         connection.close()
         return error_response(
-            "The rental must be approved and paid before confirming its deposit.",
-            400,
+            "The rental must be approved and paid "
+            "before confirming its deposit.",
+            400
         )
+
     if rental[3] != "Pending":
         connection.close()
-        return error_response("This deposit is no longer pending.", 409)
+        return error_response(
+            "This deposit is no longer pending.", 409
+        )
 
     cursor = connection.execute(
         """
@@ -3892,31 +4156,46 @@ def confirm_deposit(request_id):
           AND payment_status = 'Paid'
           AND deposit_status = 'Pending'
         """,
-        (request_id,),
+        (request_id,)
     )
+
     if cursor.rowcount != 1:
         connection.close()
-        return error_response("This deposit is no longer pending.", 409)
+        return error_response(
+            "This deposit is no longer pending.", 409
+        )
 
     connection.commit()
     connection.close()
+
     log_security_event(
         "deposit_held",
         actor_id=session["user_id"],
-        request_id=request_id,
+        request_id=request_id
     )
+
     return redirect(url_for("owner_requests"))
 
 
-@app.route("/damage-status/<int:request_id>/<condition>", methods=["POST"])
-def set_damage_status(request_id, condition):
+# =====================================================
+# DAMAGE STATUS
+# =====================================================
 
+@app.route(
+    "/damage-status/<int:request_id>/<condition>",
+    methods=["POST"]
+)
+def set_damage_status(request_id, condition):
     if "user_id" not in session:
         return redirect(url_for("login"))
+
     if condition not in {"good", "damaged"}:
-        return error_response("Choose a valid equipment condition.", 400)
+        return error_response(
+            "Choose a valid equipment condition.", 400
+        )
 
     connection = connect_database(application.DATABASE)
+
     rental = connection.execute(
         """
         SELECT
@@ -3927,27 +4206,38 @@ def set_damage_status(request_id, condition):
             borrowing_requests.damage_status,
             borrowing_requests.borrower_id
         FROM borrowing_requests
-        JOIN equipment ON borrowing_requests.equipment_id = equipment.id
+        JOIN equipment
+            ON borrowing_requests.equipment_id = equipment.id
         WHERE borrowing_requests.id = ?
         """,
-        (request_id,),
+        (request_id,)
     ).fetchone()
 
     if rental is None:
         connection.close()
-        return error_response("Rental not found.", 404, "Rental unavailable")
+        return error_response(
+            "Rental not found.", 404, "Rental unavailable"
+        )
+
     if rental[0] != session["user_id"]:
         connection.close()
-        return error_response("You cannot update this damage report.", 403)
+        return error_response(
+            "You cannot update this damage report.", 403
+        )
+
     if rental[2] != "Completed" or rental[3] != "Held":
         connection.close()
         return error_response(
-            "The completed rental must have a held deposit before inspection.",
-            400,
+            "The completed rental must have a held deposit "
+            "before inspection.",
+            400
         )
+
     if rental[4] != "Not Checked":
         connection.close()
-        return error_response("This rental has already been inspected.", 409)
+        return error_response(
+            "This rental has already been inspected.", 409
+        )
 
     if condition == "good":
         cursor = connection.execute(
@@ -3961,30 +4251,43 @@ def set_damage_status(request_id, condition):
               AND deposit_status = 'Held'
               AND damage_status = 'Not Checked'
             """,
-            (request_id,),
+            (request_id,)
         )
+
     else:
-        damage_report = request.form.get("damage_report", "").strip()
+        damage_report = request.form.get(
+            "damage_report", ""
+        ).strip()
+
         if not damage_report or len(damage_report) > 1000:
             connection.close()
             return error_response(
-                "Enter a damage description of 1 to 1000 characters."
+                "Enter a damage description of "
+                "1 to 1000 characters.",
+                400
             )
 
         damage_charge, amount_error = parse_amount(
             request.form.get("damage_charge", ""),
-            "Damage charge",
+            "Damage charge"
         )
+
         if amount_error:
             connection.close()
             return error_response(amount_error)
+
         if damage_charge < 0:
             connection.close()
-            return error_response("Damage charge cannot be negative.")
+            return error_response(
+                "Damage charge cannot be negative.", 400
+            )
+
         if damage_charge > float(rental[1] or 0):
             connection.close()
             return error_response(
-                "Damage charge cannot exceed the held security deposit."
+                "Damage charge cannot exceed the "
+                "held security deposit.",
+                400
             )
 
         cursor = connection.execute(
@@ -4002,43 +4305,60 @@ def set_damage_status(request_id, condition):
               AND deposit_status = 'Held'
               AND damage_status = 'Not Checked'
             """,
-            (damage_report, damage_charge, request_id),
+            (damage_report, damage_charge, request_id)
         )
 
     if cursor.rowcount != 1:
         connection.close()
-        return error_response("This rental has already been inspected.", 409)
+        return error_response(
+            "This rental has already been inspected.", 409
+        )
 
     if condition == "damaged":
         add_notification(
             connection,
             rental[5],
-            "The owner submitted a damage report. Review it and dispute the "
-            "proposed charge within 48 hours.",
-            url_for("my_rentals"),
+            "The owner submitted a damage report. "
+            "Review it and dispute the proposed "
+            "charge within 48 hours.",
+            url_for("my_rentals")
         )
 
     connection.commit()
     connection.close()
+
     log_security_event(
         "damage_assessed",
         actor_id=session["user_id"],
         request_id=request_id,
-        outcome=condition,
+        outcome=condition
     )
+
     return redirect(url_for("owner_requests"))
 
+
+# =====================================================
+# DISPUTE DAMAGE REPORT
+# =====================================================
 
 @app.route("/damage-dispute/<int:request_id>", methods=["POST"])
 def dispute_damage_report(request_id):
     if "user_id" not in session:
         return redirect(url_for("login"))
 
-    dispute_reason = request.form.get("dispute_reason", "").strip()
+    dispute_reason = request.form.get(
+        "dispute_reason", ""
+    ).strip()
+
     if not dispute_reason or len(dispute_reason) > 1000:
-        return error_response("Enter a dispute explanation of 1 to 1000 characters.")
+        return error_response(
+            "Enter a dispute explanation of "
+            "1 to 1000 characters.",
+            400
+        )
 
     connection = connect_database(application.DATABASE)
+
     rental = connection.execute(
         """
         SELECT
@@ -4051,28 +4371,43 @@ def dispute_damage_report(request_id):
             borrowing_requests.damage_reported_at,
             equipment.item_name
         FROM borrowing_requests
-        JOIN equipment ON borrowing_requests.equipment_id = equipment.id
+        JOIN equipment
+            ON borrowing_requests.equipment_id = equipment.id
         WHERE borrowing_requests.id = ?
         """,
-        (request_id,),
+        (request_id,)
     ).fetchone()
 
     if rental is None:
         connection.close()
-        return error_response("Rental not found.", 404, "Rental unavailable")
+        return error_response(
+            "Rental not found.", 404, "Rental unavailable"
+        )
+
     if rental[0] != session["user_id"]:
         connection.close()
-        return error_response("You cannot dispute this damage report.", 403)
+        return error_response(
+            "You cannot dispute this damage report.", 403
+        )
+
     if (
         rental[2] != "Completed"
         or rental[3] != "Held"
         or rental[4] != "Damaged"
     ):
         connection.close()
-        return error_response("This damage report is no longer open for dispute.", 409)
+        return error_response(
+            "This damage report is no longer "
+            "open for dispute.",
+            409
+        )
+
     if rental[5] != "Not Disputed":
         connection.close()
-        return error_response("This damage report has already been disputed.", 409)
+        return error_response(
+            "This damage report has already been disputed.",
+            409
+        )
 
     cursor = connection.execute(
         """
@@ -4086,41 +4421,65 @@ def dispute_damage_report(request_id):
           AND damage_status = 'Damaged'
           AND damage_dispute_status = 'Not Disputed'
           AND damage_reported_at IS NOT NULL
-          AND datetime('now') < datetime(damage_reported_at, '+48 hours')
+          AND datetime('now') < datetime(
+              damage_reported_at, '+48 hours'
+          )
         """,
-        (dispute_reason, request_id, session["user_id"]),
+        (
+            dispute_reason,
+            request_id,
+            session["user_id"]
+        )
     )
+
     if cursor.rowcount != 1:
         connection.close()
-        return error_response("The 48-hour dispute window has closed.", 409)
+        return error_response(
+            "The 48-hour dispute window has closed.", 409
+        )
 
     add_notification(
         connection,
         rental[1],
-        f"The borrower disputed the damage report for {rental[7]}. "
-        "Review the dispute before settling the deposit.",
-        url_for("owner_requests"),
+        f"The borrower disputed the damage report "
+        f"for {rental[7]}. Review the dispute before "
+        "settling the deposit.",
+        url_for("owner_requests")
     )
+
     connection.commit()
     connection.close()
+
     log_security_event(
         "damage_dispute_opened",
         actor_id=session["user_id"],
-        request_id=request_id,
+        request_id=request_id
     )
+
     return redirect(url_for("my_rentals"))
 
 
-@app.route("/damage-dispute/<int:request_id>/resolve", methods=["POST"])
+# =====================================================
+# RESOLVE DAMAGE DISPUTE
+# =====================================================
+
+@app.route(
+    "/damage-dispute/<int:request_id>/resolve",
+    methods=["POST"]
+)
 def resolve_damage_dispute(request_id):
     if "user_id" not in session:
         return redirect(url_for("login"))
 
     resolution = request.form.get("resolution", "")
+
     if resolution not in {"uphold", "revise", "cancel"}:
-        return error_response("Choose a valid dispute resolution.", 400)
+        return error_response(
+            "Choose a valid dispute resolution.", 400
+        )
 
     connection = connect_database(application.DATABASE)
+
     rental = connection.execute(
         """
         SELECT
@@ -4133,19 +4492,32 @@ def resolve_damage_dispute(request_id):
             borrowing_requests.borrower_id,
             equipment.item_name
         FROM borrowing_requests
-        JOIN equipment ON borrowing_requests.equipment_id = equipment.id
+        JOIN equipment
+            ON borrowing_requests.equipment_id = equipment.id
         WHERE borrowing_requests.id = ?
         """,
-        (request_id,),
+        (request_id,)
     ).fetchone()
 
     if rental is None:
         connection.close()
-        return error_response("Rental not found.", 404, "Rental unavailable")
-    is_administrator = session.get("user_role") == "admin"
-    if rental[0] != session["user_id"] and not is_administrator:
+        return error_response(
+            "Rental not found.", 404, "Rental unavailable"
+        )
+
+    is_administrator = (
+        session.get("user_role") == "admin"
+    )
+
+    if (
+        rental[0] != session["user_id"]
+        and not is_administrator
+    ):
         connection.close()
-        return error_response("You cannot resolve this damage dispute.", 403)
+        return error_response(
+            "You cannot resolve this damage dispute.", 403
+        )
+
     if (
         rental[1] != "Completed"
         or rental[2] != "Held"
@@ -4153,25 +4525,37 @@ def resolve_damage_dispute(request_id):
         or rental[4] != "Pending"
     ):
         connection.close()
-        return error_response("There is no open damage dispute to resolve.", 409)
+        return error_response(
+            "There is no open damage dispute to resolve.",
+            409
+        )
 
     if resolution == "revise":
         damage_charge, amount_error = parse_amount(
             request.form.get("damage_charge", ""),
-            "Damage charge",
+            "Damage charge"
         )
+
         if amount_error:
             connection.close()
             return error_response(amount_error)
+
         if damage_charge < 0:
             connection.close()
-            return error_response("Damage charge cannot be negative.")
+            return error_response(
+                "Damage charge cannot be negative.", 400
+            )
+
         if damage_charge > float(rental[5] or 0):
             connection.close()
             return error_response(
-                "Damage charge cannot exceed the held security deposit."
+                "Damage charge cannot exceed the "
+                "held security deposit.",
+                400
             )
+
         resolution_status = "Revised"
+
         cursor = connection.execute(
             """
             UPDATE borrowing_requests
@@ -4184,10 +4568,21 @@ def resolve_damage_dispute(request_id):
               AND damage_status = 'Damaged'
               AND damage_dispute_status = 'Pending'
             """,
-            (damage_charge, resolution_status, resolution_status, request_id),
+            (
+                damage_charge,
+                resolution_status,
+                resolution_status,
+                request_id
+            )
         )
+
     else:
-        resolution_status = "Upheld" if resolution == "uphold" else "Cancelled"
+        resolution_status = (
+            "Upheld"
+            if resolution == "uphold"
+            else "Cancelled"
+        )
+
         if resolution == "cancel":
             cursor = connection.execute(
                 """
@@ -4201,8 +4596,13 @@ def resolve_damage_dispute(request_id):
                   AND damage_status = 'Damaged'
                   AND damage_dispute_status = 'Pending'
                 """,
-                (resolution_status, resolution_status, request_id),
+                (
+                    resolution_status,
+                    resolution_status,
+                    request_id
+                )
             )
+
         else:
             cursor = connection.execute(
                 """
@@ -4215,12 +4615,19 @@ def resolve_damage_dispute(request_id):
                   AND damage_status = 'Damaged'
                   AND damage_dispute_status = 'Pending'
                 """,
-                (resolution_status, resolution_status, request_id),
+                (
+                    resolution_status,
+                    resolution_status,
+                    request_id
+                )
             )
 
     if cursor.rowcount != 1:
         connection.close()
-        return error_response("This damage dispute has already been resolved.", 409)
+        return error_response(
+            "This damage dispute has already been resolved.",
+            409
+        )
 
     add_notification(
         connection,
@@ -4228,24 +4635,34 @@ def resolve_damage_dispute(request_id):
         f"The {'administrator' if is_administrator else 'owner'} "
         f"{resolution_status.lower()} the damage dispute for "
         f"{rental[7]}. Check My Rentals for the updated charge.",
-        url_for("my_rentals"),
+        url_for("my_rentals")
     )
+
     connection.commit()
     connection.close()
+
     log_security_event(
         "damage_dispute_resolved",
         actor_id=session["user_id"],
         request_id=request_id,
-        outcome=resolution_status.lower(),
-    )
-    return redirect(
-        url_for("admin_dashboard" if is_administrator else "owner_requests")
+        outcome=resolution_status.lower()
     )
 
+    return redirect(
+        url_for(
+            "admin_dashboard"
+            if is_administrator
+            else "owner_requests"
+        )
+    )
+
+
+# =====================================================
+# REFUND DEPOSIT
+# =====================================================
 
 @app.route("/refund-deposit/<int:request_id>", methods=["POST"])
 def refund_deposit(request_id):
-
     if "user_id" not in session:
         return redirect(url_for("login"))
 
@@ -4254,13 +4671,13 @@ def refund_deposit(request_id):
     rental = connection.execute(
         """
         SELECT
-      equipment.owner_id,
-borrowing_requests.status,
-borrowing_requests.deposit_status,
-borrowing_requests.damage_status
+            equipment.owner_id,
+            borrowing_requests.status,
+            borrowing_requests.deposit_status,
+            borrowing_requests.damage_status
         FROM borrowing_requests
         JOIN equipment
-        ON borrowing_requests.equipment_id = equipment.id
+            ON borrowing_requests.equipment_id = equipment.id
         WHERE borrowing_requests.id = ?
         """,
         (request_id,)
@@ -4272,21 +4689,30 @@ borrowing_requests.damage_status
 
     if rental[0] != session["user_id"]:
         connection.close()
-        return error_response("You cannot refund this deposit.", 403)
+        return error_response(
+            "You cannot refund this deposit.", 403
+        )
 
     if rental[1] != "Completed":
         connection.close()
-        return error_response("The equipment must be returned first.", 400)
+        return error_response(
+            "The equipment must be returned first.", 400
+        )
 
     if rental[2] != "Held":
         connection.close()
-        return error_response("There is no held deposit to refund.", 400)
+        return error_response(
+            "There is no held deposit to refund.", 400
+        )
+
     if rental[3] != "Good Condition":
         connection.close()
         return error_response(
-            "Mark the item as Good Condition before refunding the deposit.",
-            400,
+            "Mark the item as Good Condition "
+            "before refunding the deposit.",
+            400
         )
+
     cursor = connection.execute(
         """
         UPDATE borrowing_requests
@@ -4298,21 +4724,32 @@ borrowing_requests.damage_status
         """,
         (request_id,)
     )
+
     if cursor.rowcount != 1:
         connection.close()
-        return error_response("This deposit is no longer eligible for refund.", 409)
+        return error_response(
+            "This deposit is no longer eligible for refund.",
+            409
+        )
 
     connection.commit()
     connection.close()
+
     log_security_event(
         "deposit_refunded",
         actor_id=session["user_id"],
-        request_id=request_id,
+        request_id=request_id
     )
+
     return redirect(url_for("owner_requests"))
+
+
+# =====================================================
+# SETTLE DAMAGE
+# =====================================================
+
 @app.route("/settle-damage/<int:request_id>", methods=["POST"])
 def settle_damage(request_id):
-
     if "user_id" not in session:
         return redirect(url_for("login"))
 
@@ -4341,35 +4778,53 @@ def settle_damage(request_id):
 
     if rental[0] != session["user_id"]:
         connection.close()
-        return error_response("You cannot settle this damage.", 403)
+        return error_response(
+            "You cannot settle this damage.", 403
+        )
 
     if rental[1] != "Completed":
         connection.close()
-        return error_response("The equipment must be returned first.", 400)
+        return error_response(
+            "The equipment must be returned first.", 400
+        )
 
     if rental[2] != "Held":
         connection.close()
-        return error_response("The deposit is not currently held.", 400)
+        return error_response(
+            "The deposit is not currently held.", 400
+        )
 
     if rental[3] != "Damaged":
         connection.close()
-        return error_response("This item is not marked as damaged.", 400)
+        return error_response(
+            "This item is not marked as damaged.", 400
+        )
+
     if rental[4] == "Pending":
         connection.close()
         return error_response(
-            "Resolve the borrower's damage dispute before settling the deposit.",
-            409,
+            "Resolve the borrower's damage dispute "
+            "before settling the deposit.",
+            409
         )
-    if rental[5] is None or connection.execute(
-        """
-        SELECT datetime('now') < datetime(?, '+48 hours')
-        """,
-        (rental[5],),
-    ).fetchone()[0]:
+
+    dispute_window_open = (
+        rental[5] is None
+        or connection.execute(
+            """
+            SELECT datetime('now') <
+                   datetime(?, '+48 hours')
+            """,
+            (rental[5],)
+        ).fetchone()[0]
+    )
+
+    if dispute_window_open:
         connection.close()
         return error_response(
-            "Wait until the borrower's 48-hour damage review window has closed.",
-            409,
+            "Wait until the borrower's 48-hour "
+            "damage review window has closed.",
+            409
         )
 
     cursor = connection.execute(
@@ -4382,13 +4837,19 @@ def settle_damage(request_id):
           AND damage_status = 'Damaged'
           AND damage_dispute_status != 'Pending'
           AND damage_reported_at IS NOT NULL
-          AND datetime('now') >= datetime(damage_reported_at, '+48 hours')
+          AND datetime('now') >=
+              datetime(damage_reported_at, '+48 hours')
         """,
         (request_id,)
     )
+
     if cursor.rowcount != 1:
         connection.close()
-        return error_response("This damage settlement has already been completed.", 409)
+        return error_response(
+            "This damage settlement has already "
+            "been completed.",
+            409
+        )
 
     connection.commit()
     connection.close()
@@ -4397,6 +4858,117 @@ def settle_damage(request_id):
         "deposit_settled_for_damage",
         actor_id=session["user_id"],
         request_id=request_id,
-        outcome="damage_charge_applied",
+        outcome="damage_charge_applied"
     )
+
+    return redirect(url_for("owner_requests"))
+
+
+# =====================================================
+# REJECT EQUIPMENT INSPECTION
+# =====================================================
+
+@app.route(
+    "/rentals/<int:request_id>/reject-inspection",
+    methods=["POST"]
+)
+def reject_equipment_inspection(request_id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
+    reason = (
+        request.form.get("inspection_rejection_reason") or ""
+    ).strip()
+
+    if not 10 <= len(reason) <= 500:
+        return error_response(
+            "Please provide a reason between "
+            "10 and 500 characters.",
+            400
+        )
+
+    connection = connect_database(application.DATABASE)
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        rental = connection.execute(
+            """
+            SELECT
+                br.borrower_id,
+                equipment.owner_id,
+                br.inspection_rejected_at
+            FROM borrowing_requests AS br
+            JOIN equipment
+                ON equipment.id = br.equipment_id
+            WHERE br.id = ?
+              AND br.status = 'Pending'
+              AND br.payment_status = 'Unpaid'
+              AND br.meetup_status = 'Confirmed'
+              AND br.meetup_at IS NOT NULL
+              AND br.meetup_at <= ?
+            """,
+            (
+                request_id,
+                datetime.now().strftime("%Y-%m-%dT%H:%M")
+            )
+        ).fetchone()
+
+        if rental is None:
+            return error_response(
+                "This inspection cannot be rejected "
+                "at this stage.",
+                409
+            )
+
+        borrower_id, owner_id, rejected_at = rental
+
+        if user_id not in (borrower_id, owner_id):
+            return error_response("Access denied.", 403)
+
+        if rejected_at is not None:
+            return error_response(
+                "This inspection has already been rejected.",
+                409
+            )
+
+        cursor = connection.execute(
+            """
+            UPDATE borrowing_requests
+            SET inspection_rejected_by = ?,
+                inspection_rejection_reason = ?,
+                inspection_rejected_at = ?,
+                meetup_owner_verified_at = NULL,
+                meetup_borrower_verified_at = NULL,
+                status = 'Rejected'
+            WHERE id = ?
+              AND status = 'Pending'
+              AND payment_status = 'Unpaid'
+              AND inspection_rejected_at IS NULL
+            """,
+            (
+                user_id,
+                reason,
+                datetime.now().isoformat(timespec="seconds"),
+                request_id
+            )
+        )
+
+        if cursor.rowcount != 1:
+            return error_response(
+                "This inspection is no longer available "
+                "for rejection.",
+                409
+            )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+    if user_id == borrower_id:
+        return redirect(url_for("my_rentals"))
+
     return redirect(url_for("owner_requests"))

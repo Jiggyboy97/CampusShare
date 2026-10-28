@@ -72,10 +72,34 @@
             {{ rental[6] }}
         </p>
 
-        <p>
-            <strong>Amount:</strong>
-            ¥{{ "%.2f"|format(rental[4] or 0) }}
-        </p>
+<div style="text-align: left; padding: 15px; background: #f5f7fa; border-radius: 10px; margin: 20px 0;">
+
+    <h3>Payment Breakdown</h3>
+
+    <p>
+        <strong>Rental Fee:</strong>
+        &yen;{{ "%.2f"|format(rental[4] or 0) }}
+    </p>
+
+    <p>
+        <strong>Refundable Security Deposit:</strong>
+        &yen;{{ "%.2f"|format(rental[10] or 0) }}
+    </p>
+
+    <hr>
+
+    <p>
+        <strong>Demo Payment Amount:</strong>
+        &yen;{{ "%.2f"|format(rental[4] or 0) }}
+    </p>
+
+    <p style="font-size: 13px; color: #666;">
+        The security deposit is tracked separately.
+        The owner confirms its status after rental approval.
+        Demo payment does not transfer real money.
+    </p>
+
+</div>
 
         <p>
             <strong>Payment Status:</strong>

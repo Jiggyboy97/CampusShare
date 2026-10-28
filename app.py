@@ -513,7 +513,12 @@ def init_db():
 "meetup_proposed_at": "TEXT",
 "meetup_confirmed_at": "TEXT",
 "meetup_owner_verified_at": "TEXT",
-"meetup_borrower_verified_at": "TEXT"
+
+"meetup_borrower_verified_at": "TEXT",
+"inspection_rejected_by": "INTEGER",
+"inspection_rejection_reason": "TEXT NOT NULL DEFAULT ''",
+"inspection_rejected_at": "TEXT"
+
             }
         )
         # =============================================

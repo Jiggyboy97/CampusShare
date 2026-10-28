@@ -9,3 +9,10 @@ static/uploads/
 app_backup.py
 test_results.txt
 test_evidence_2026-10-21.txt
+
+# Local databases and project backups
+/campusshare.db
+/instance/
+/CampusShare_Saved_Backup/
+*.bak
+*_backup.py
