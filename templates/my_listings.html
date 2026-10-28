@@ -32,7 +32,10 @@
         <a href="/my-listings">My Listings</a>
         <a href="/my-rentals">My Rentals</a>
         <a href="/requests">Requests</a>
-        <a href="/logout">Logout</a>
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+        </form>
     </nav>
 
 </header>
@@ -63,9 +66,15 @@
 
         <div class="equipment-card">
 
-            <div class="equipment-icon">
-                📦
-            </div>
+            {% if item[11] %}
+            <img
+                src="{{ url_for('static', filename=item[11]) }}"
+                alt="Photo of {{ item[1] }}"
+                style="width: 100%; height: 180px; object-fit: cover; border-radius: 10px;"
+            >
+            {% else %}
+            <div class="equipment-icon">📦</div>
+            {% endif %}
 
             <h2>
                 {{ item[1] }}
@@ -95,7 +104,7 @@
 
                 <span>
                     <strong>Price:</strong>
-                    ¥{{ item[6] }} / day
+                    ¥{{ item[6] }} / {{ item[13] }}
                 </span>
 
                 {% else %}
@@ -123,14 +132,14 @@
                     <strong>Pickup:</strong>
                     {{ item[10] }}
                 </span>
-{% if item[11] == "Booked" %}
+{% if item[12] == "Booked" %}
 
 <p>
     <strong>Status:</strong>
     🔴 Booked
 </p>
 
-{% elif item[11] == "Pending" %}
+{% elif item[12] == "Pending" %}
 
 <p>
     <strong>Status:</strong>
@@ -165,6 +174,8 @@
     method="POST"
     action="/delete-listing/{{ item[0] }}"
     style="margin-top: 10px;"
+>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <button
     type="submit"

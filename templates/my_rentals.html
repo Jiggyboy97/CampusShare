@@ -1,30 +1,19 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Rentals - CampusShare</title>
-
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='css/style.css') }}"
-    >
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-
 
 <body class="dashboard-body">
 
 <header class="dashboard-navbar">
-
-    <div class="logo">
-        CampusShare
-    </div>
+    <div class="logo">CampusShare</div>
 
     <nav>
         <a href="/dashboard">Dashboard</a>
@@ -32,30 +21,27 @@
         <a href="/list-item">List Item</a>
         <a href="/my-rentals">My Rentals</a>
         <a href="/requests">Requests</a>
-        <a href="/logout">Logout</a>
+
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <button type="submit"
+                    style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">
+                Logout
+            </button>
+        </form>
     </nav>
-
 </header>
-
 
 <main class="browse-container">
 
     <div class="list-item-heading">
-
-        <p class="small-text">
-            MY BORROWINGS
-        </p>
-
-        <h1>
-            My Rentals
-        </h1>
-
-        <p>
-            Check the status of equipment you requested to borrow or rent.
-        </p>
-
+        <p class="small-text">MY BORROWINGS</p>
+        <h1>My Rentals</h1>
+        <p>Check your equipment requests and payments.</p>
     </div>
-
 
     <div class="equipment-grid">
 
@@ -63,85 +49,609 @@
 
         <div class="equipment-card">
 
-            <div class="equipment-icon">
-                📦
+            <!-- EQUIPMENT IMAGE -->
+            <div class="equipment-icon"
+                 style="padding: 0; overflow: hidden;">
+
+                {% if rental[29] and (rental[29]|lower).endswith(('.jpg', '.jpeg', '.png', '.webp')) %}
+
+                    <img
+                        src="{{ url_for('static', filename=rental[29]) }}"
+                        alt="{{ rental[1] }}"
+                        style="width: 100%; height: 220px; object-fit: cover; display: block;"
+                    >
+
+                {% elif 'macbook' in rental[1]|lower %}
+
+                    <img
+                        src="{{ url_for('static', filename='images/macbook_pro_m1.jpg') }}"
+                        alt="MacBook sample image"
+                        style="width: 100%; height: 220px; object-fit: cover; display: block;"
+                    >
+
+                {% elif 'drone' in rental[1]|lower %}
+
+                    <img
+                        src="{{ url_for('static', filename='images/drone.jpg') }}"
+                        alt="Drone sample image"
+                        style="width: 100%; height: 220px; object-fit: cover; display: block;"
+                    >
+
+                {% elif 'calculator' in rental[1]|lower %}
+
+                    <img
+                        src="{{ url_for('static', filename='images/calculator.jpg') }}"
+                        alt="Calculator sample image"
+                        style="width: 100%; height: 220px; object-fit: cover; display: block;"
+                    >
+
+                {% elif 'camera' in rental[1]|lower %}
+
+                    <img
+                        src="{{ url_for('static', filename='images/canon_eos_camera.jpg') }}"
+                        alt="Camera sample image"
+                        style="width: 100%; height: 220px; object-fit: cover; display: block;"
+                    >
+
+                {% elif 'mathematics' in rental[1]|lower %}
+
+                    <img
+                        src="{{ url_for('static', filename='images/mathematics_book.jpg') }}"
+                        alt="Mathematics book sample image"
+                        style="width: 100%; height: 220px; object-fit: cover; display: block;"
+                    >
+
+                {% else %}
+                    <span>📦</span>
+                {% endif %}
+
             </div>
 
-            <h2>
-                {{ rental[1] }}
-            </h2>
+            <h2>{{ rental[1] }}</h2>
 
             <p>
                 <strong>Owner:</strong>
                 {{ rental[2] }}
             </p>
 
-            <div class="equipment-details">
-
-                <span>
-                    <strong>Start Date:</strong>
-                    {{ rental[3] }}
-                </span>
-
-                <span>
-                    <strong>End Date:</strong>
-                    {{ rental[4] }}
-                </span>
-
-                <span>
-                    <strong>Status:</strong>
-                    {{ rental[5] }}
-                </span>
-
-                <span>
-                    <strong>Pickup Location:</strong>
-                    {{ rental[6] }}
-                </span>
-
-            </div>
-
-
-            {% if rental[5] == "Approved" %}
-
-            <p style="margin-top: 15px;">
-                ✅ Your request has been approved.
+            <p>
+                <strong>Start Date:</strong>
+                {{ rental[3] }}
+                {% if rental[18] %}
+                    at {{ rental[18] }}
+                {% endif %}
             </p>
+
+            <p>
+                <strong>End Date:</strong>
+                {{ rental[4] }}
+                {% if rental[19] %}
+                    at {{ rental[19] }}
+                {% endif %}
+            </p>
+
+            <p>
+                <strong>Status:</strong>
+                {{ rental[5] }}
+            </p>
+
+
+            <!-- MEETUP DETAILS -->
+            {% if rental[5] == "Pending"
+                  and rental[26] in ["Proposed", "Confirmed"] %}
+
+                <div style="margin-top: 15px; margin-bottom: 15px;">
+
+                    <h4>Equipment Meetup Details</h4>
+
+                    <p>
+                        <strong>Meetup Status:</strong>
+                        {{ rental[26] }}
+                    </p>
+
+                    <p>
+                        <strong>Meetup Date and Time:</strong>
+                        {{ rental[27] | replace('T', ' ') }}
+                    </p>
+
+                    <p>
+                        <strong>Meetup Location:</strong>
+                        {{ rental["meetup_location"] }}
+                    </p>
+
+                    {% if rental[26] == "Proposed" %}
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('confirm_meetup', request_id=rental[0]) }}"
+                        >
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token() }}"
+                            >
+
+                            <button
+                                type="submit"
+                                class="dashboard-main-button"
+                            >
+                                Confirm Meetup
+                            </button>
+                        </form>
+
+                    {% endif %}
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- RENTAL INFORMATION -->
+            <p>
+                <strong>Pickup Location:</strong>
+                {{ rental[9] }}
+            </p>
+
+            <p>
+                <strong>Total Price:</strong>
+                ¥{{ rental[8] }}
+            </p>
+
+            <p>
+                <strong>Deposit Status:</strong>
+                {{ rental[7] }}
+            </p>
+
+            <p>
+                <strong>Security Deposit:</strong>
+                ¥{{ "%.2f"|format(rental[11] or 0) }}
+            </p>
+
+            <p>
+                <strong>Payment:</strong>
+                {{ rental[6] }}
+            </p>
+
+
+            <!-- QR PAYMENT BUTTON -->
+            {% if rental[5] in ("Approved", "Overdue")
+                  and rental[6] == "Unpaid" %}
+
+                <a
+                    href="{{ url_for('qr_payment', request_id=rental[0]) }}"
+                    class="dashboard-main-button"
+                    style="margin-top: 10px; display: inline-block;"
+                >
+                    📱 Pay with QR Code
+                </a>
+
+            {% endif %}
+
+
+            <!-- DAMAGE INFORMATION -->
+            {% if rental[12] == "Damaged" %}
+
+                <p>
+                    <strong>Damage Status:</strong>
+                    {{ rental[12] }}
+                </p>
+
+                {% if rental[13] %}
+                    <p>
+                        <strong>Damage Report:</strong>
+                        {{ rental[13] }}
+                    </p>
+                {% endif %}
+
+                {% if rental[7] == "Held" %}
+
+                    <p>
+                        <strong>Proposed Damage Charge:</strong>
+                        ¥{{ "%.2f"|format(rental[14] or 0) }}
+                    </p>
+
+                    {% if rental[24] %}
+                        <p>
+                            <strong>Dispute Window Ends (UTC):</strong>
+                            {{ rental[24] }}
+                        </p>
+                    {% endif %}
+
+                    <p>
+                        <strong>Dispute Status:</strong>
+                        {{ rental[20] }}
+                    </p>
+
+                    {% if rental[20] == "Not Disputed" %}
+
+                        {% if rental[25] %}
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('dispute_damage_report', request_id=rental[0]) }}"
+                                style="margin-top: 10px;"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token() }}"
+                                >
+
+                                <textarea
+                                    name="dispute_reason"
+                                    maxlength="1000"
+                                    placeholder="Explain why you dispute this damage report or charge..."
+                                    required
+                                    style="width: 100%; padding: 10px; margin-bottom: 10px;"
+                                ></textarea>
+
+                                <button
+                                    type="submit"
+                                    class="dashboard-main-button"
+                                >
+                                    Dispute Damage Report
+                                </button>
+                            </form>
+
+                        {% else %}
+
+                            <p>
+                                The 48-hour damage review window has closed.
+                            </p>
+
+                        {% endif %}
+
+                    {% elif rental[20] == "Pending" %}
+
+                        <p>
+                            <strong>Your dispute:</strong>
+                            {{ rental[21] }}
+                        </p>
+
+                        <p>
+                            The owner must resolve your dispute
+                            before the deposit is settled.
+                        </p>
+
+                    {% elif rental[22] %}
+
+                        <p>
+                            <strong>Dispute Resolution:</strong>
+                            {{ rental[22] }}
+                        </p>
+
+                    {% endif %}
+
+                {% else %}
+
+                    <p>
+                        <strong>Final Damage Charge:</strong>
+                        ¥{{ "%.2f"|format(rental[14] or 0) }}
+                    </p>
+
+                    {% if rental[7] == "Settled" %}
+
+                        {% set refund =
+                            (rental[11] or 0) - (rental[14] or 0)
+                        %}
+
+                        <p>
+                            <strong>Refund Received:</strong>
+                            ¥{{ "%.2f"|format(refund if refund > 0 else 0) }}
+                        </p>
+
+                        <p>✅ Damage settlement completed.</p>
+
+                    {% endif %}
+
+                {% endif %}
+
+            {% endif %}
+
+
+            <!-- LATE FEE -->
+            {% if (rental[15] or 0) > 0 %}
+
+                <p>
+                    <strong>Late Fee:</strong>
+                    ¥{{ "%.2f"|format(rental[15] or 0) }}
+                </p>
+
+                <p>
+                    <strong>Late Fee Status:</strong>
+                    {{ rental[16] }}
+                </p>
+
+                {% if rental[16] == "Unpaid" %}
+
+                    <form
+                        method="POST"
+                        action="{{ url_for('pay_late_fee', request_id=rental[0]) }}"
+                    >
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token() }}"
+                        >
+
+                        <button
+                            type="submit"
+                            class="dashboard-main-button"
+                            onclick="return confirm('Pay this late fee?');"
+                        >
+                            💳 Mark Late Fee Paid (Demo)
+                        </button>
+                    </form>
+
+                {% endif %}
+
+                {% if rental[16] == "Paid" %}
+                    <p>✅ Late fee paid.</p>
+                {% endif %}
+
+            {% endif %}
+
+
+            <!-- RENTAL STATUS -->
+            {% if rental[5] in ("Approved", "Overdue") %}
+
+                <p style="margin-top: 20px;">
+
+                    {% if rental[5] == "Overdue" %}
+                        ⚠️ Rental overdue. The agreed return date has passed.
+                    {% else %}
+                        ✅ Your request has been approved.
+                    {% endif %}
+
+                </p>
+
+                {% if rental[17] < 0 %}
+
+                    <p>
+                        <strong>
+                            ⚠️ Return overdue by {{ -rental[17] }}
+                            day{% if rental[17] != -1 %}s{% endif %}.
+                        </strong>
+                    </p>
+
+                {% elif rental[17] == 0 %}
+
+                    <p><strong>⏰ Return due today.</strong></p>
+
+                {% elif rental[17] == 1 %}
+
+                    <p><strong>⏰ Return due tomorrow.</strong></p>
+
+                {% else %}
+
+                    <p>
+                        <strong>
+                            ⏰ Return due in {{ rental[17] }} days.
+                        </strong>
+                    </p>
+
+                {% endif %}
+
 
             {% elif rental[5] == "Pending" %}
 
-            <p style="margin-top: 15px;">
-                ⏳ Waiting for the owner to respond.
-            </p>
-{% elif rental[5] == "Completed" %}
+                <!-- CONFIRMED MEETUP -->
+                {% if rental["meetup_status"] == "Confirmed" %}
 
-<p style="margin-top: 15px;">
-    ✅ Rental completed.
-</p>
+                    <p style="margin-top: 20px;">
+                        ✅ Meetup confirmed. Please meet the owner
+                        and inspect the equipment before proceeding
+                        to payment.
+                    </p>
 
-{% if rental[7] == 1 %}
 
-<p>
-    ⭐ Rating submitted
-</p>
+<!-- BORROWER: VERIFY EQUIPMENT INSPECTION -->
 
-{% else %}
+<div style="
+    margin-top: 15px;
+    padding: 15px;
+    background: #eefaf3;
+    border-radius: 10px;
+">
 
-<a
-    href="/rate/{{ rental[0] }}"
-    class="dashboard-main-button"
->
-    ⭐ Rate Owner
-</a>
+    <h4>Equipment Inspection Verification</h4>
+
+    <p>
+        After meeting the owner, inspect the equipment
+        together and upload a new inspection photograph.
+    </p>
+
+    <form
+        action="{{ url_for('verify_equipment_inspection', request_id=rental[0]) }}"
+        method="POST"
+    >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button
+            type="submit"
+            style="
+                background: #198754;
+                color: white;
+                border: none;
+                padding: 12px 18px;
+                border-radius: 8px;
+                cursor: pointer;
+            "
+        >
+            ✅ Confirm Equipment Inspection
+        </button>
+    </form>
+
+    <p style="font-size: 12px; color: #666;">
+        Only confirm after inspecting the equipment
+        in person at the scheduled meetup.
+    </p>
+
+</div>
+
+                    <!-- EQUIPMENT PICKUP INSPECTION PHOTO -->
+                    <div style="margin-top: 20px;">
+
+                        <h4>Equipment Condition Inspection</h4>
+
+                        <p>
+                            After meeting the owner and inspecting
+                            the equipment, upload photographs showing
+                            its condition before borrowing it.
+                        </p>
+
+                        <form
+                            action="{{ url_for('upload_pickup_inspection_photo', request_id=rental[0]) }}"
+                            method="POST"
+                            enctype="multipart/form-data"
+                        >
+
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token() }}"
+                            >
+
+                            <label for="inspection-photo-{{ rental[0] }}">
+                                Select Equipment Photo
+                            </label>
+
+                            <input
+                                type="file"
+                                id="inspection-photo-{{ rental[0] }}"
+                                name="inspection_photo"
+                                accept="image/jpeg,image/png,image/webp"
+                                required
+                                style="display: block; margin: 12px 0;"
+                            >
+
+                            <p>
+                                Maximum 5 MB per photo.
+                                You can upload up to five pickup photographs.
+                            </p>
+
+                            <button
+                                type="submit"
+                                class="dashboard-main-button"
+                            >
+                                Upload Inspection Photo
+                            </button>
+
+                        </form>
+
+                   
+<!-- SAVED INSPECTION PHOTOGRAPHS -->
+
+{% set inspection_photos = photos_by_rental.get(rental[0], []) %}
+
+{% if inspection_photos %}
+
+<div style="margin-top: 25px;">
+
+    <h4>Saved Inspection Photographs</h4>
+
+    <p>
+        {{ inspection_photos|length }}
+        photograph(s) saved for this rental.
+    </p>
+
+    <div style="
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 15px;
+    ">
+
+        {% for photo in inspection_photos %}
+
+        <div style="
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 8px;
+        ">
+
+            <a href="{{ url_for('view_inspection_photo', photo_id=photo['id']) }}"
+               target="_blank"
+               rel="noopener noreferrer">
+
+                <img
+                    src="{{ url_for('view_inspection_photo', photo_id=photo['id']) }}"
+                    alt="Equipment inspection photograph"
+                    loading="lazy"
+                    style="
+                        width: 100%;
+                        height: 150px;
+                        object-fit: cover;
+                        border-radius: 8px;
+                    "
+                >
+            </a>
+
+            <p>{{ photo['stage']|capitalize }} Inspection</p>
+            <p>{{ photo['created_at'] }}</p>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
 
 {% endif %}
- 
+
+                   
+                    </div>
+                
+
+
+                <!-- PROPOSED MEETUP -->
+                {% elif rental["meetup_status"] == "Proposed" %}
+
+                    <p style="margin-top: 20px;">
+                        📅 The owner has proposed a meetup.
+                        Please confirm the meeting details above.
+                    </p>
+
+
+                <!-- MEETUP NOT SCHEDULED -->
+                {% else %}
+
+                    <p style="margin-top: 20px;">
+                        ⏳ Waiting for the owner to schedule a meetup.
+                    </p>
+
+                {% endif %}
 
 
             {% elif rental[5] == "Rejected" %}
 
-            <p style="margin-top: 15px;">
-                ❌ Your request was rejected.
-            </p>
+                <p style="margin-top: 20px;">
+                    ❌ Your request was rejected.
+                </p>
+
+
+            {% elif rental[5] == "Completed" %}
+
+                <p style="margin-top: 20px;">
+                    ✅ Rental completed.
+                </p>
+
+                {% if rental[10] == 1 %}
+
+                    <p>
+                        ⭐ You have reviewed the owner.
+                    </p>
+
+                {% else %}
+
+                    <a
+                        href="{{ url_for('rate_owner', request_id=rental[0]) }}"
+                        class="dashboard-main-button"
+                    >
+                        ⭐ Rate Owner
+                    </a>
+
+                {% endif %}
 
             {% endif %}
 
@@ -159,11 +669,9 @@
 
 </main>
 
-
 <footer>
     <p>© 2026 CampusShare</p>
 </footer>
 
 </body>
-
 </html>

@@ -25,11 +25,14 @@
         CampusShare
     </div>
 
-    <nav>
+    <nav aria-label="Main navigation">
         <a href="/dashboard">Dashboard</a>
         <a href="/browse">Browse</a>
         <a href="/list-item">List Item</a>
-        <a href="/logout">Logout</a>
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+        </form>
     </nav>
 
 </header>
@@ -46,11 +49,17 @@
         <h1>{{ item[2] }}</h1>
 
         <p>
-            Listed by {{ item[12] }}
+            Listed by {{ item[14] }}
         </p>
 
     </div>
 
+    {% if item[12] %}
+    <img class="detail-photo"
+        src="{{ url_for('static', filename=item[12]) }}"
+        alt="Photo of {{ item[2] }}"
+    >
+    {% endif %}
 
     <div class="equipment-form">
 
@@ -78,11 +87,26 @@
             <strong>Rental Price:</strong>
 
             {% if item[6] == "Paid" %}
-                ¥{{ item[7] }} per day
+                ¥{{ item[7] }} per {{ item[13] }}
             {% else %}
                 Free
             {% endif %}
         </p>
+        {% if item[13] == "hour" %}
+        <p>
+            <strong>Hourly booking:</strong>
+            Same-day rentals only. Partial hours round up, with a one-hour
+            minimum.
+        </p>
+        <p>
+            <strong>Pickup and return window:</strong>
+            {% if item[15] and item[16] %}
+                {{ item[15] }} to {{ item[16] }}
+            {% else %}
+                Any time (no owner time window set).
+            {% endif %}
+        </p>
+        {% endif %}
 
         <p>
             <strong>Security Deposit:</strong>
@@ -106,35 +130,54 @@
 
         <p>
             <strong>Owner:</strong>
-            {{ item[12] }}
+            {{ item[14] }}
         </p>
-
+{% if session.get("user_id") and session.get("user_id") != item[1] %}
+    <a
+        href="{{ url_for('chat', student_id=item[1]) }}"
+        class="dashboard-main-button"
+    >
+        💬 Message Owner
+    </a>
+{% endif %}
     </div>
 
 
-    <div style="margin-top: 30px;">
+    <div class="request-panel">
         
 {% if session.get("user_id") != item[1] %}
 
-    {% if equipment_status == "Booked" %}
-
+    {% if equipment_status in ["Booked", "Pending"] %}
         <div class="equipment-form">
-            <h2>🔴 Equipment Booked</h2>
-
             <p>
-                This equipment is currently booked and cannot be requested.
+                Some rental times have already been requested or booked.
+                You can still request this item for another time that does not
+                overlap.
             </p>
         </div>
+    {% endif %}
+{% if item[10] and item[10] < today %}
+    <p class="field-error" role="alert">
+        This equipment is no longer available for borrowing.
+        Please browse other equipment.
+    </p>
+{% else %}
+    <h2>Request This Equipment</h2>
 
-    {% else %}
-
-        <h2>Request This Equipment</h2>
-
-        <form
+    <form
             method="POST"
             action="/request-equipment/{{ item[0] }}"
             class="equipment-form"
+            id="rental-request-form"
+            data-sharing-type="{{ item[6] }}"
+            data-price="{{ item[7] or 0 }}"
+            data-price-unit="{{ item[13] }}"
+            data-available-from="{{ item[9] }}"
+            data-available-until="{{ item[10] }}"
+            data-pickup-time-start="{{ item[15] or '' }}"
+            data-return-time-end="{{ item[16] or '' }}"
         >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <label for="start_date">
                 Start Date
@@ -144,8 +187,14 @@
                 type="date"
                 id="start_date"
                 name="start_date"
+                value="{{ form_values.get('start_date', '') }}"
+                min="{{ [today, item[9]]|max }}"
+                max="{{ item[10] }}"
+                {% if field_errors.get('start_date') %}aria-invalid="true"{% endif %}
+                aria-describedby="start_date_error"
                 required
             >
+            <span class="field-error" id="start_date_error" aria-live="polite">{{ field_errors.get('start_date', '') }}</span>
 
             <label for="end_date">
                 End Date
@@ -155,8 +204,28 @@
                 type="date"
                 id="end_date"
                 name="end_date"
+                value="{{ form_values.get('end_date', '') }}"
+                min="{{ [today, item[9], form_values.get('start_date', '')]|max }}"
+                max="{{ item[10] }}"
+                {% if field_errors.get('end_date') %}aria-invalid="true"{% endif %}
+                {% if item[13] == "hour" %}readonly{% endif %}
+                aria-describedby="end_date_error"
                 required
             >
+            <span class="field-error" id="end_date_error" aria-live="polite">{{ field_errors.get('end_date', '') }}</span>
+            {% if item[13] == "hour" %}
+            <label for="start_time">Start Time</label>
+            <input type="time" id="start_time" name="start_time" value="{{ form_values.get('start_time', '') }}" aria-describedby="start_time_error" required>
+            <span class="field-error" id="start_time_error" aria-live="polite">{{ field_errors.get('start_time', '') }}</span>
+            <label for="end_time">End Time</label>
+            <input type="time" id="end_time" name="end_time" value="{{ form_values.get('end_time', '') }}" aria-describedby="end_time_error" required>
+            <span class="field-error" id="end_time_error" aria-live="polite">{{ field_errors.get('end_time', '') }}</span>
+            {% endif %}
+
+            <p id="rental-cost-estimate" role="status" aria-live="polite">
+                Select your rental dates{% if item[13] == "hour" %} and times{% endif %}
+                to see the estimated rental cost. The security deposit is not included.
+            </p>
 
             <button
                 type="submit"
@@ -165,16 +234,146 @@
                 Send Borrowing Request
             </button>
 
-        </form>
-
-    {% endif %}
-
+    </form>
+{% endif %}
 {% endif %}
        
 
     </div>
 
-</main>
+    <script>
+        const rentalForm = document.getElementById("rental-request-form");
+        const rentalStart = document.getElementById("start_date");
+        const rentalEnd = document.getElementById("end_date");
+        const rentalEstimate = document.getElementById("rental-cost-estimate");
+        const rentalStartTime = document.getElementById("start_time");
+        const rentalEndTime = document.getElementById("end_time");
+        const formatEstimate = (amount) =>
+            `¥${amount.toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+            })}`;
+        const estimateRentalCost = () => {
+            if (!rentalForm || !rentalStart.value || !rentalEnd.value) {
+                return;
+            }
+
+            const startDate = rentalStart.value;
+            const endDate = rentalEnd.value;
+            const availableFrom = rentalForm.dataset.availableFrom;
+            const availableUntil = rentalForm.dataset.availableUntil;
+            if (
+                startDate < availableFrom
+                || endDate > availableUntil
+                || endDate < startDate
+            ) {
+                rentalEstimate.textContent =
+                    "Choose dates within the listed availability to see an estimate.";
+                return;
+            }
+
+            let billableUnits;
+            if (rentalForm.dataset.priceUnit === "hour") {
+                if (!rentalStartTime.value || !rentalEndTime.value) {
+                    rentalEstimate.textContent =
+                        "Choose start and end times to see the estimated rental cost.";
+                    return;
+                }
+                if (startDate !== endDate) {
+                    rentalEstimate.textContent =
+                        "Hourly rentals must start and end on the same day.";
+                    return;
+                }
+                const startMinutes = rentalStartTime.value
+                    .split(":")
+                    .map(Number)
+                    .reduce((hours, minutes) => hours * 60 + minutes);
+                const endMinutes = rentalEndTime.value
+                    .split(":")
+                    .map(Number)
+                    .reduce((hours, minutes) => hours * 60 + minutes);
+                const pickupWindowStart = rentalForm.dataset.pickupTimeStart;
+                const returnWindowEnd = rentalForm.dataset.returnTimeEnd;
+                if (
+                    endMinutes <= startMinutes
+                    || (pickupWindowStart && rentalStartTime.value < pickupWindowStart)
+                    || (returnWindowEnd && rentalEndTime.value > returnWindowEnd)
+                ) {
+                    rentalEstimate.textContent =
+                        "Choose valid times within the owner's pickup and return window.";
+                    return;
+                }
+                billableUnits = Math.max(
+                    1,
+                    Math.ceil((endMinutes - startMinutes) / 60),
+                );
+            } else {
+                const startTimestamp = Date.parse(`${startDate}T00:00:00Z`);
+                const endTimestamp = Date.parse(`${endDate}T00:00:00Z`);
+                billableUnits =
+                    Math.floor((endTimestamp - startTimestamp) / 86400000) + 1;
+            }
+
+            if (rentalForm.dataset.sharingType !== "Paid") {
+                rentalEstimate.textContent =
+                    "Estimated rental cost: Free. The security deposit is not included.";
+                return;
+            }
+
+            const price = Number(rentalForm.dataset.price);
+            rentalEstimate.textContent =
+                `Estimated rental cost: ${formatEstimate(price * billableUnits)}`
+                + ` (${billableUnits} ${rentalForm.dataset.priceUnit}`
+                + `${billableUnits === 1 ? "" : "s"} × ${formatEstimate(price)}). `
+                + "The security deposit is not included.";
+        };
+        if (rentalForm && rentalStart && rentalEnd) {
+            const updateRentalDates = () => {
+                const minimumStartDate = "{{ [today, item[9]]|max }}";
+                const maximumDate = "{{ item[10] }}";
+                rentalStart.min = minimumStartDate;
+                rentalStart.max = maximumDate;
+                const minimumEndDate = rentalStart.value || minimumStartDate;
+                rentalEnd.min = minimumEndDate;
+                rentalEnd.max = maximumDate;
+              if (rentalForm.dataset.priceUnit === "hour" && rentalStart.value) {
+    rentalEnd.value = rentalStart.value;
+}
+                document.getElementById("start_date_error").textContent =
+                    rentalStart.value && (
+                        rentalStart.value < minimumStartDate
+                        || rentalStart.value > maximumDate
+                    )
+                        ? "Choose a date within the equipment availability period."
+                        : "";
+                document.getElementById("end_date_error").textContent =
+                    rentalEnd.value && (
+                        rentalEnd.value < minimumEndDate
+                        || rentalEnd.value > maximumDate
+                    )
+                        ? "Choose an end date on or after the start date and within availability."
+                        : "";
+                estimateRentalCost();
+            };
+            rentalStart.addEventListener("change", () => {
+                if (rentalEnd.value && rentalEnd.value < rentalEnd.min) {
+                    rentalEnd.value = "";
+                }
+                updateRentalDates();
+            });
+            rentalEnd.addEventListener("change", updateRentalDates);
+            rentalStart.addEventListener("input", updateRentalDates);
+            rentalEnd.addEventListener("input", updateRentalDates);
+            if (rentalStartTime && rentalEndTime) {
+                rentalStartTime.addEventListener("input", estimateRentalCost);
+                rentalEndTime.addEventListener("input", estimateRentalCost);
+                rentalStartTime.addEventListener("change", estimateRentalCost);
+                rentalEndTime.addEventListener("change", estimateRentalCost);
+            }
+        }
+    </script>
+
+    </main>
 
 </body>
 

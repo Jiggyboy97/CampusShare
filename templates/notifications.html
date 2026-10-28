@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Notifications | CampusShare</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+<header>
+    <nav>
+        <h1>CampusShare</h1>
+
+        <div>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/browse">Browse</a>
+            <a href="/students">Students</a>
+            <a href="/notifications">Notifications</a>
+            <a href="/requests">Requests</a>
+            <form method="POST" action="/logout" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+            </form>
+        </div>
+    </nav>
+</header>
+
+<main style="
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 50px 30px;
+">
+
+    <div style="text-align: center; margin-bottom: 40px;">
+
+        <p style="
+            font-weight: bold;
+            letter-spacing: 2px;
+        ">
+            CAMPUS ACTIVITY
+        </p>
+
+        <h1>🔔 Notifications</h1>
+
+        <p>
+            See your latest CampusShare updates.
+        </p>
+
+        <form
+            method="POST"
+            action="{{ url_for('update_notification_email_preference') }}"
+            style="margin-top: 20px;"
+        >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>
+                <input
+                    type="checkbox"
+                    name="notification_emails_enabled"
+                    value="1"
+                    {% if notification_emails_enabled %}checked{% endif %}
+                >
+                Email me when I receive CampusShare notifications
+            </label>
+            <p>
+                Email delivery requires a verified account address and
+                configured SMTP settings.
+            </p>
+            <button type="submit" class="secondary-button">
+                Save Email Preference
+            </button>
+        </form>
+
+    </div>
+
+    {% for notification in notifications %}
+
+    <div style="
+        background: white;
+        padding: 22px;
+        border-radius: 14px;
+        margin-bottom: 18px;
+        {% if not notification[3] %}border-left: 5px solid #2563eb;{% endif %}
+    ">
+
+        <p style="
+            font-size: 18px;
+            margin-bottom: 8px;
+        ">
+            {{ notification[1] }}
+        </p>
+
+        <strong>
+            {% if notification[3] %}Read{% else %}Unread{% endif %}
+        </strong>
+
+        <small>
+            {{ notification[4] }}
+        </small>
+
+        {% if not notification[3] %}
+        <form
+            method="POST"
+            action="{{ url_for('mark_notification_read', notification_id=notification[0]) }}"
+            style="margin-top: 15px;"
+        >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="secondary-button">
+                Mark as read
+            </button>
+        </form>
+        {% endif %}
+
+        {% if notification[2] %}
+
+        <div style="margin-top: 15px;">
+
+            <a
+                href="{{ notification[2] }}"
+                class="dashboard-main-button"
+            >
+                View
+            </a>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+    {% else %}
+
+    <div class="empty-message">
+        You have no notifications yet.
+    </div>
+
+    {% endfor %}
+
+</main>
+
+</body>
+
+</html>

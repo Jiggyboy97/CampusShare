@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or "Something went wrong" }} - CampusShare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dashboard-body">
+    <main class="error-container" role="alert">
+        <p class="small-text">CAMPUSSHARE</p>
+        <h1>{{ title or "Something went wrong" }}</h1>
+        <p>{{ message }}</p>
+        <a class="dashboard-main-button" href="{{ back_url or url_for('home') }}">Go back</a>
+    </main>
+</body>
+</html>

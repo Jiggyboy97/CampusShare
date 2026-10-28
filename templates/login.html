@@ -34,11 +34,37 @@
     <p class="register-text">
         Welcome back to CampusShare.
     </p>
-
+{% if request.args.get("verification") == "sent" %}
+<div style="background: #e8f7ed; padding: 14px; border-radius: 8px; margin-bottom: 20px;">
+    Account created. Check your university inbox for the verification link.
+</div>
+{% elif request.args.get("verification") == "failed" %}
+<div style="background: #fff4e5; padding: 14px; border-radius: 8px; margin-bottom: 20px;">
+    Your account was created, but the verification email could not be sent.
+    Check SMTP settings and request another link below.
+</div>
+{% elif request.args.get("verified") == "1" %}
+<div style="background: #e8f7ed; padding: 14px; border-radius: 8px; margin-bottom: 20px;">
+    ✅ Email verified. You can now sign in.
+</div>
+{% endif %}
+{% if request.args.get("reset") == "1" %}
+<div style="
+    background: #e8f7ed;
+    border: 1px solid #b7e4c7;
+    padding: 14px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    color: #1f6b3a;
+">
+    ✅ Password reset successful. You can now log in with your new password.
+</div>
+{% endif %}
     <form
         method="POST"
         action="/login"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <label for="email">
             University Email
@@ -72,7 +98,12 @@
         </button>
 
     </form>
-
+<p style="text-align: center; margin-top: 15px;">
+    <a href="/forgot-password">Forgot Password?</a>
+</p>
+<p style="text-align: center; margin-top: 10px;">
+    <a href="{{ url_for('resend_verification') }}">Resend verification email</a>
+</p>
     <p class="login-link">
 
         Don't have an account?

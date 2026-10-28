@@ -30,7 +30,10 @@
         <a href="/browse">Browse</a>
         <a href="/my-listings">My Listings</a>
         <a href="/my-reviews">My Reviews</a>
-        <a href="/logout">Logout</a>
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+        </form>
     </nav>
 
 </header>
@@ -47,8 +50,11 @@
         <h1>My Reviews</h1>
 
         <p>
-            See ratings and feedback from students who rented your equipment.
+            See ratings and feedback you have received from other students.
         </p>
+        {% if review_count %}
+        <p><strong>{{ "%.1f"|format(average_rating) }}/5</strong> average from {{ review_count }} review{% if review_count != 1 %}s{% endif %}</p>
+        {% endif %}
 
     </div>
 

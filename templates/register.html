@@ -41,6 +41,7 @@
         method="POST"
         action="/register"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <label for="name">
             Full Name
@@ -56,14 +57,14 @@
 
 
         <label for="email">
-            University Email
+            Beihang University Email
         </label>
 
         <input
             type="email"
             id="email"
             name="email"
-            placeholder="Enter your university email"
+            placeholder="yourname@buaa.edu.cn"
             required
         >
 
@@ -90,8 +91,11 @@
             id="password"
             name="password"
             placeholder="Create a password"
+            minlength="8"
+            maxlength="128"
             required
         >
+        <small>Use 8 to 128 characters and avoid common passwords.</small>
 
 
         <label for="confirm-password">
@@ -103,6 +107,8 @@
             id="confirm-password"
             name="confirm_password"
             placeholder="Confirm your password"
+            minlength="12"
+            maxlength="128"
             required
         >
 

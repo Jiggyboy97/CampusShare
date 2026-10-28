@@ -44,9 +44,10 @@
             List Item
         </a>
 
-        <a href="/logout">
-            Logout
-        </a>
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+        </form>
 
     </nav>
 
@@ -76,7 +77,18 @@
         method="POST"
         action="/list-item"
         class="equipment-form"
+        enctype="multipart/form-data"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label for="image">Equipment Photo (JPG, PNG, or WebP; max 5 MB)</label>
+        <input
+            type="file"
+            id="image"
+            name="image"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+        >
+
 
         <label for="item_name">
             Equipment Name
@@ -87,6 +99,7 @@
             id="item_name"
             name="item_name"
             placeholder="Example: Canon EOS Camera"
+            value="{{ form_values.get('item_name', '') }}"
             required
         >
 
@@ -105,31 +118,31 @@
                 Select category
             </option>
 
-            <option value="Camera">
+            <option value="Camera" {% if form_values.get('category') == 'Camera' %}selected{% endif %}>
                 Cameras
             </option>
 
-            <option value="Calculator">
+            <option value="Calculator" {% if form_values.get('category') == 'Calculator' %}selected{% endif %}>
                 Calculators
             </option>
 
-            <option value="Microphone">
+            <option value="Microphone" {% if form_values.get('category') == 'Microphone' %}selected{% endif %}>
                 Microphones
             </option>
 
-            <option value="Charger">
+            <option value="Charger" {% if form_values.get('category') == 'Charger' %}selected{% endif %}>
                 Chargers & Adapters
             </option>
 
-            <option value="Tripod">
+            <option value="Tripod" {% if form_values.get('category') == 'Tripod' %}selected{% endif %}>
                 Tripods
             </option>
 
-            <option value="Computer Accessories">
+            <option value="Computer Accessories" {% if form_values.get('category') == 'Computer Accessories' %}selected{% endif %}>
                 Computer Accessories
             </option>
 
-            <option value="Other">
+            <option value="Other" {% if form_values.get('category') == 'Other' %}selected{% endif %}>
                 Other
             </option>
 
@@ -146,7 +159,7 @@
             rows="5"
             placeholder="Describe the equipment and accessories included."
             required
-        ></textarea>
+        >{{ form_values.get('description', '') }}</textarea>
 
 
         <label for="condition">
@@ -163,15 +176,15 @@
                 Select condition
             </option>
 
-            <option value="Excellent">
+            <option value="Excellent" {% if form_values.get('condition') == 'Excellent' %}selected{% endif %}>
                 Excellent
             </option>
 
-            <option value="Good">
+            <option value="Good" {% if form_values.get('condition') == 'Good' %}selected{% endif %}>
                 Good
             </option>
 
-            <option value="Fair">
+            <option value="Fair" {% if form_values.get('condition') == 'Fair' %}selected{% endif %}>
                 Fair
             </option>
 
@@ -192,19 +205,49 @@
                 Select sharing type
             </option>
 
-            <option value="Free">
+            <option value="Free" {% if form_values.get('sharing_type') == 'Free' %}selected{% endif %}>
                 Free Borrowing
             </option>
 
-            <option value="Paid">
+            <option value="Paid" {% if form_values.get('sharing_type') == 'Paid' %}selected{% endif %}>
                 Paid Rental
             </option>
 
         </select>
 
 
+        <label for="price_unit">
+            Rental Price Charged Per
+        </label>
+        <select id="price_unit" name="price_unit" required>
+            <option value="day" {% if form_values.get('price_unit', 'day') == 'day' %}selected{% endif %}>Day</option>
+            <option value="hour" {% if form_values.get('price_unit') == 'hour' %}selected{% endif %}>Hour</option>
+        </select>
+
+        <div id="hourly-time-window" class="date-row" hidden>
+            <div>
+                <label for="pickup_time_start">Earliest Pickup Time</label>
+                <input
+                    type="time"
+                    id="pickup_time_start"
+                    name="pickup_time_start"
+                    value="{{ form_values.get('pickup_time_start', '09:00') }}"
+                >
+            </div>
+            <div>
+                <label for="return_time_end">Latest Return Time</label>
+                <input
+                    type="time"
+                    id="return_time_end"
+                    name="return_time_end"
+                    value="{{ form_values.get('return_time_end', '18:00') }}"
+                >
+            </div>
+            <p>Hourly bookings must start and finish within this daily window.</p>
+        </div>
+
         <label for="price">
-            Rental Price Per Day (¥)
+            Rental Price (¥)
         </label>
 
         <input
@@ -214,6 +257,7 @@
             min="0"
             step="0.01"
             placeholder="Example: 20"
+            value="{{ form_values.get('price', '') }}"
         >
 
 
@@ -227,6 +271,7 @@
             name="deposit"
             min="0"
             step="0.01"
+            value="{{ form_values.get('deposit', '') }}"
             placeholder="Example: 200"
         >
 
@@ -243,8 +288,13 @@
                     type="date"
                     id="available_from"
                     name="available_from"
+                    value="{{ form_values.get('available_from', '') }}"
+                    min="{{ today }}"
+                    {% if field_errors.get('available_from') %}aria-invalid="true"{% endif %}
+                    aria-describedby="available_from_error"
                     required
                 >
+                <span class="field-error" id="available_from_error" aria-live="polite">{{ field_errors.get('available_from', '') }}</span>
 
             </div>
 
@@ -259,8 +309,13 @@
                     type="date"
                     id="available_until"
                     name="available_until"
+                    value="{{ form_values.get('available_until', '') }}"
+                    min="{{ [today, form_values.get('available_from', today)]|max }}"
+                    {% if field_errors.get('available_until') %}aria-invalid="true"{% endif %}
+                    aria-describedby="available_until_error"
                     required
                 >
+                <span class="field-error" id="available_until_error" aria-live="polite">{{ field_errors.get('available_until', '') }}</span>
 
             </div>
 
@@ -276,6 +331,7 @@
             id="location"
             name="location"
             placeholder="Example: University Library"
+            value="{{ form_values.get('location', '') }}"
             required
         >
 
@@ -290,6 +346,43 @@
     </form>
 
 </main>
+
+<script>
+    const priceUnit = document.getElementById("price_unit");
+    const hourlyTimeWindow = document.getElementById("hourly-time-window");
+    const pickupTimeStart = document.getElementById("pickup_time_start");
+    const returnTimeEnd = document.getElementById("return_time_end");
+    const updateHourlyTimeWindow = () => {
+        const isHourly = priceUnit.value === "hour";
+        hourlyTimeWindow.hidden = !isHourly;
+        pickupTimeStart.required = isHourly;
+        returnTimeEnd.required = isHourly;
+    };
+    priceUnit.addEventListener("change", updateHourlyTimeWindow);
+    updateHourlyTimeWindow();
+
+    const availableFrom = document.getElementById("available_from");
+    const availableUntil = document.getElementById("available_until");
+    const updateAvailabilityDates = () => {
+        const minimumEndDate = availableFrom.value || "{{ today }}";
+        availableUntil.min = minimumEndDate;
+        document.getElementById("available_from_error").textContent =
+            availableFrom.value && availableFrom.value < "{{ today }}"
+                ? "Choose today or a future date."
+                : "";
+        document.getElementById("available_until_error").textContent =
+            availableUntil.value && availableUntil.value < minimumEndDate
+                ? "Available Until must be on or after Available From."
+                : "";
+    };
+    availableFrom.addEventListener("change", () => {
+        if (availableUntil.value && availableUntil.value < availableUntil.min) {
+            availableUntil.value = "";
+        }
+        updateAvailabilityDates();
+    });
+    availableUntil.addEventListener("change", updateAvailabilityDates);
+</script>
 
 
 <footer>

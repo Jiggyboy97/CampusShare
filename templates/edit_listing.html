@@ -29,7 +29,10 @@
         <a href="/dashboard">Dashboard</a>
         <a href="/browse">Browse</a>
         <a href="/my-listings">My Listings</a>
-        <a href="/logout">Logout</a>
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+        </form>
     </nav>
 
 </header>
@@ -55,14 +58,35 @@
     <form
         method="POST"
         class="equipment-form"
+        enctype="multipart/form-data"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% if item[12] %}
+        <img
+            src="{{ url_for('static', filename=item[12]) }}"
+            alt="Current photo of {{ item[2] }}"
+            style="width: 100%; max-height: 260px; object-fit: contain;"
+        >
+        <label>
+            <input type="checkbox" name="remove_image" value="1">
+            Remove current photo
+        </label>
+        {% endif %}
+        <label for="image">Replace photo (JPG, PNG, or WebP; max 5 MB)</label>
+        <input
+            type="file"
+            id="image"
+            name="image"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+        >
 
         <label>Equipment Name</label>
 
         <input
             type="text"
             name="item_name"
-            value="{{ item[2] }}"
+            value="{{ form_values.get('item_name', item[2]) }}"
             required
         >
 
@@ -71,19 +95,21 @@
 
         <select name="category" required>
 
-            <option value="{{ item[3] }}">
-                {{ item[3] }}
+            {% if form_values.get('category', item[3]) not in ['Camera', 'Calculator', 'Microphone', 'Charger', 'Tripod', 'Computer Accessories', 'Other'] %}
+            <option value="{{ form_values.get('category', item[3]) }}" selected>
+                {{ form_values.get('category', item[3]) }}
             </option>
+            {% endif %}
 
-            <option value="Camera">Camera</option>
-            <option value="Calculator">Calculator</option>
-            <option value="Microphone">Microphone</option>
-            <option value="Charger">Charger</option>
-            <option value="Tripod">Tripod</option>
-            <option value="Computer Accessories">
+            <option value="Camera" {% if form_values.get('category', item[3]) == 'Camera' %}selected{% endif %}>Camera</option>
+            <option value="Calculator" {% if form_values.get('category', item[3]) == 'Calculator' %}selected{% endif %}>Calculator</option>
+            <option value="Microphone" {% if form_values.get('category', item[3]) == 'Microphone' %}selected{% endif %}>Microphone</option>
+            <option value="Charger" {% if form_values.get('category', item[3]) == 'Charger' %}selected{% endif %}>Charger</option>
+            <option value="Tripod" {% if form_values.get('category', item[3]) == 'Tripod' %}selected{% endif %}>Tripod</option>
+            <option value="Computer Accessories" {% if form_values.get('category', item[3]) == 'Computer Accessories' %}selected{% endif %}>
                 Computer Accessories
             </option>
-            <option value="Other">Other</option>
+            <option value="Other" {% if form_values.get('category', item[3]) == 'Other' %}selected{% endif %}>Other</option>
 
         </select>
 
@@ -94,20 +120,22 @@
             name="description"
             rows="5"
             required
-        >{{ item[4] }}</textarea>
+        >{{ form_values.get('description', item[4]) }}</textarea>
 
 
         <label>Condition</label>
 
         <select name="condition" required>
 
-            <option value="{{ item[5] }}">
-                {{ item[5] }}
+            {% if form_values.get('condition', item[5]) not in ['Excellent', 'Good', 'Fair'] %}
+            <option value="{{ form_values.get('condition', item[5]) }}" selected>
+                {{ form_values.get('condition', item[5]) }}
             </option>
+            {% endif %}
 
-            <option value="Excellent">Excellent</option>
-            <option value="Good">Good</option>
-            <option value="Fair">Fair</option>
+            <option value="Excellent" {% if form_values.get('condition', item[5]) == 'Excellent' %}selected{% endif %}>Excellent</option>
+            <option value="Good" {% if form_values.get('condition', item[5]) == 'Good' %}selected{% endif %}>Good</option>
+            <option value="Fair" {% if form_values.get('condition', item[5]) == 'Fair' %}selected{% endif %}>Fair</option>
 
         </select>
 
@@ -116,22 +144,53 @@
 
         <select name="sharing_type" required>
 
-            <option value="{{ item[6] }}">
-                {{ item[6] }}
+            {% if form_values.get('sharing_type', item[6]) not in ['Free', 'Paid'] %}
+            <option value="{{ form_values.get('sharing_type', item[6]) }}" selected>
+                {{ form_values.get('sharing_type', item[6]) }}
             </option>
+            {% endif %}
 
-            <option value="Free">Free</option>
-            <option value="Paid">Paid</option>
+            <option value="Free" {% if form_values.get('sharing_type', item[6]) == 'Free' %}selected{% endif %}>Free</option>
+            <option value="Paid" {% if form_values.get('sharing_type', item[6]) == 'Paid' %}selected{% endif %}>Paid</option>
 
         </select>
 
 
-        <label>Price Per Day (¥)</label>
+        <label for="price_unit">Rental Price Charged Per</label>
+        <select id="price_unit" name="price_unit" required>
+            <option value="day" {% if form_values.get('price_unit', item[13]) == "day" %}selected{% endif %}>Day</option>
+            <option value="hour" {% if form_values.get('price_unit', item[13]) == "hour" %}selected{% endif %}>Hour</option>
+        </select>
+
+        <div id="hourly-time-window" class="date-row" {% if form_values.get('price_unit', item[13]) != "hour" %}hidden{% endif %}>
+            <div>
+                <label for="pickup_time_start">Earliest Pickup Time</label>
+                <input
+                    type="time"
+                    id="pickup_time_start"
+                    name="pickup_time_start"
+                    value="{{ form_values.get('pickup_time_start', item[14] or '09:00') }}"
+                >
+            </div>
+            <div>
+                <label for="return_time_end">Latest Return Time</label>
+                <input
+                    type="time"
+                    id="return_time_end"
+                    name="return_time_end"
+                    value="{{ form_values.get('return_time_end', item[15] or '18:00') }}"
+                >
+            </div>
+            <p>Hourly bookings must start and finish within this daily window.</p>
+        </div>
+
+
+        <label>Rental Price (¥)</label>
 
         <input
             type="number"
             name="price"
-            value="{{ item[7] }}"
+            value="{{ form_values.get('price', item[7]) }}"
             min="0"
             step="0.01"
         >
@@ -142,7 +201,7 @@
         <input
             type="number"
             name="deposit"
-            value="{{ item[8] }}"
+            value="{{ form_values.get('deposit', item[8]) }}"
             min="0"
             step="0.01"
         >
@@ -153,9 +212,13 @@
         <input
             type="date"
             name="available_from"
-            value="{{ item[9] }}"
+            value="{{ form_values.get('available_from', item[9]) }}"
+            min="{{ today }}"
+            {% if field_errors.get('available_from') %}aria-invalid="true"{% endif %}
+            aria-describedby="available_from_error"
             required
         >
+        <span class="field-error" id="available_from_error" aria-live="polite">{{ field_errors.get('available_from', '') }}</span>
 
 
         <label>Available Until</label>
@@ -163,9 +226,13 @@
         <input
             type="date"
             name="available_until"
-            value="{{ item[10] }}"
+            value="{{ form_values.get('available_until', item[10]) }}"
+            min="{{ [today, form_values.get('available_from', item[9])]|max }}"
+            {% if field_errors.get('available_until') %}aria-invalid="true"{% endif %}
+            aria-describedby="available_until_error"
             required
         >
+        <span class="field-error" id="available_until_error" aria-live="polite">{{ field_errors.get('available_until', '') }}</span>
 
 
         <label>Pickup Location</label>
@@ -173,7 +240,7 @@
         <input
             type="text"
             name="location"
-            value="{{ item[11] }}"
+            value="{{ form_values.get('location', item[11]) }}"
             required
         >
 
@@ -188,6 +255,43 @@
     </form>
 
 </main>
+
+<script>
+    const priceUnit = document.getElementById("price_unit");
+    const hourlyTimeWindow = document.getElementById("hourly-time-window");
+    const pickupTimeStart = document.getElementById("pickup_time_start");
+    const returnTimeEnd = document.getElementById("return_time_end");
+    const updateHourlyTimeWindow = () => {
+        const isHourly = priceUnit.value === "hour";
+        hourlyTimeWindow.hidden = !isHourly;
+        pickupTimeStart.required = isHourly;
+        returnTimeEnd.required = isHourly;
+    };
+    priceUnit.addEventListener("change", updateHourlyTimeWindow);
+    updateHourlyTimeWindow();
+
+    const availableFrom = document.querySelector('[name="available_from"]');
+    const availableUntil = document.querySelector('[name="available_until"]');
+    const updateAvailabilityDates = () => {
+        const minimumEndDate = availableFrom.value || "{{ today }}";
+        availableUntil.min = minimumEndDate;
+        document.getElementById("available_from_error").textContent =
+            availableFrom.value && availableFrom.value < "{{ today }}"
+                ? "Choose today or a future date."
+                : "";
+        document.getElementById("available_until_error").textContent =
+            availableUntil.value && availableUntil.value < minimumEndDate
+                ? "Available Until must be on or after Available From."
+                : "";
+    };
+    availableFrom.addEventListener("change", () => {
+        if (availableUntil.value && availableUntil.value < availableUntil.min) {
+            availableUntil.value = "";
+        }
+        updateAvailabilityDates();
+    });
+    availableUntil.addEventListener("change", updateAvailabilityDates);
+</script>
 
 </body>
 </html>

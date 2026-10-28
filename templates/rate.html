@@ -9,7 +9,7 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Rate Owner - CampusShare</title>
+    <title>Rate {{ rated_role }} - CampusShare</title>
 
     <link
         rel="stylesheet"
@@ -29,7 +29,10 @@
         <a href="/dashboard">Dashboard</a>
         <a href="/browse">Browse</a>
         <a href="/my-rentals">My Rentals</a>
-        <a href="/logout">Logout</a>
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+        </form>
     </nav>
 
 </header>
@@ -43,10 +46,10 @@
             RENTAL FEEDBACK
         </p>
 
-        <h1>Rate Owner</h1>
+        <h1>Rate {{ rated_role }}</h1>
 
         <p>
-            Rate your experience with {{ owner_name }}.
+            Rate your experience with {{ rated_user_name }}.
         </p>
 
     </div>
@@ -56,6 +59,7 @@
         method="POST"
         class="equipment-form"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <label for="rating">
             Rating

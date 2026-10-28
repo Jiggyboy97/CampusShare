@@ -31,7 +31,10 @@
         <a href="/browse">Browse</a>
         <a href="/list-item">List Item</a>
         <a href="/requests">Requests</a>
-        <a href="/logout">Logout</a>
+        <form method="POST" action="/logout" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" style="background: none; border: 0; color: inherit; font: inherit; cursor: pointer;">Logout</button>
+        </form>
     </nav>
 
 </header>
@@ -70,21 +73,100 @@
                 {{ request[1] }}
             </h2>
 
+<!-- OWNER INSPECTION PHOTO GALLERY -->
+
+{% set inspection_photos = photos_by_request.get(request[0], []) %}
+
+{% if inspection_photos %}
+
+<div style="margin-top: 20px; margin-bottom: 20px;">
+
+    <h4>Equipment Inspection Photographs</h4>
+
+    <p>
+        {{ inspection_photos|length }}
+        photograph(s) uploaded for this rental.
+    </p>
+
+    <div style="
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 15px;
+    ">
+
+        {% for photo in inspection_photos %}
+
+        <div style="
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 8px;
+        ">
+
+            <a
+                href="{{ url_for('view_inspection_photo', photo_id=photo['id']) }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+
+                <img
+                    src="{{ url_for('view_inspection_photo', photo_id=photo['id']) }}"
+                    alt="Equipment inspection photograph"
+                    loading="lazy"
+                    style="
+                        width: 100%;
+                        height: 150px;
+                        object-fit: cover;
+                        border-radius: 8px;
+                    "
+                >
+
+            </a>
+
+            <p style="font-size: 13px; margin-top: 8px;">
+                {{ photo['stage']|capitalize }} Inspection
+            </p>
+
+            <p style="font-size: 12px;">
+                {{ photo['created_at'] }}
+            </p>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endif %}
+
             <p>
                 <strong>Requested by:</strong>
                 {{ request[2] }}
             </p>
+<!-- Message Borrower Button -->
+<p>
+    <a
+        href="{{ url_for('message_request_borrower', request_id=request[0]) }}"
+        class="dashboard-main-button"
+    >
+        💬 Message Borrower
+    </a>
+</p>
 
             <div class="equipment-details">
 
                 <span>
                     <strong>Start Date:</strong>
                     {{ request[3] }}
+                    {% if request[15] %}at {{ request[15] }}{% endif %}
                 </span>
 
                 <span>
                     <strong>End Date:</strong>
                     {{ request[4] }}
+                    {% if request[16] %}at {{ request[16] }}{% endif %}
                 </span>
 
                 <span>
@@ -92,29 +174,416 @@
                     {{ request[5] }}
                 </span>
 
-            </div>
+              <span>
+    <strong>Payment:</strong>
+    {{ request[6] }}
+</span>
 
+<span>
+    <strong>Security Deposit:</strong>
+    ¥{{ request[8] }}
+</span>
 
-           {% if request[5] == "Pending" %}
+<span>
+    <strong>Deposit Status:</strong>
+    {{ request[7] }}
+</span>  
+<span>
+    <strong>Late Fee:</strong>
+    ¥{{ request[9] }}
+</span>
+
+<span>
+    <strong>Damage Status:</strong>
+    {{ request[10] }}
+</span>
+{% if request[10] == "Damaged" and request[11] %}
+<span>
+    <strong>Damage Report:</strong>
+    {{ request[11] }}
+</span>
+{% endif %}
+{% if request[10] == "Damaged" and request[7] == "Held" %}
+<span>
+    <strong>Proposed Damage Charge:</strong>
+    ¥{{ "%.2f"|format(request[12] or 0) }}
+</span>
+<span>
+    <strong>Borrower Dispute:</strong>
+    {{ request[17] }}
+</span>
+{% if request[20] %}
+<span>
+    <strong>Dispute Window Ends (UTC):</strong>
+    {{ request[20] }}
+</span>
+{% endif %}
+{% if request[17] == "Pending" %}
+<p>
+    <strong>Borrower's explanation:</strong>
+    {{ request[18] }}
+</p>
+<form
+    method="POST"
+    action="{{ url_for('resolve_damage_dispute', request_id=request[0]) }}"
+    style="margin-top: 10px;"
+>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="damage-charge-resolution-{{ request[0] }}">Resolution</label>
+    <select
+        id="damage-charge-resolution-{{ request[0] }}"
+        name="resolution"
+        required
+        style="width: 100%; padding: 10px; margin-bottom: 10px;"
+    >
+        <option value="uphold">Uphold current charge</option>
+        <option value="revise">Revise charge</option>
+        <option value="cancel">Cancel charge</option>
+    </select>
+    <label for="revised-damage-charge-{{ request[0] }}">Revised charge (used only when revising)</label>
+    <input
+        id="revised-damage-charge-{{ request[0] }}"
+        type="number"
+        name="damage_charge"
+        min="0"
+        max="{{ request[8] or 0 }}"
+        step="0.01"
+        value="{{ request[12] or 0 }}"
+        style="width: 100%; padding: 10px; margin-bottom: 10px;"
+    >
+    <button type="submit" class="dashboard-main-button">
+        Resolve Dispute
+    </button>
+</form>
+{% elif request[19] %}
+<p>
+    <strong>Dispute Resolution:</strong>
+    {{ request[19] }}
+</p>
+{% endif %}
+{% endif %}
+{% if request[10] == "Damaged" and request[7] == "Settled" %}
+
+{% set refund_amount = (request[8] or 0) - (request[12] or 0) %}
+
+<p style="margin-top: 10px;">
+    <strong>Damage Charge:</strong>
+    ¥{{ "%.2f"|format(request[12] or 0) }}
+</p>
+
+<p>
+    <strong>Refund to Borrower:</strong>
+    ¥{{ "%.2f"|format(refund_amount if refund_amount > 0 else 0) }}
+</p>
+
+<p>
+    ✅ Damage settlement completed.
+</p>
+
+{% endif %}
+{% if request[5] == "Completed"
+    and request[7] == "Held"
+    and request[10] == "Damaged"
+    and request[21] %}
 
 <form
     method="POST"
-    action="/requests/{{ request[0] }}/approve"
+    action="{{ url_for('settle_damage', request_id=request[0]) }}"
+    style="margin-top: 10px;"
 >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button
         type="submit"
         class="dashboard-main-button"
+        onclick="return confirm('Settle this damage charge and release the remaining deposit?');"
     >
-        Approve
+        💰 Settle Damage
     </button>
 </form>
 
+{% elif request[5] == "Completed"
+    and request[7] == "Held"
+    and request[10] == "Damaged"
+    and request[17] == "Pending" %}
+<p style="margin-top: 10px;">
+    Resolve the open dispute before settling this deposit.
+</p>
+
+{% elif request[5] == "Completed"
+    and request[7] == "Held"
+    and request[10] == "Damaged"
+    and request[20] %}
+<p style="margin-top: 10px;">
+    Settlement is available after the 48-hour review window.
+</p>
+
+{% endif %}
+            </div>
+{% if request[5] in ("Approved", "Overdue")
+    and request[6] == "Paid"
+    and request[7] == "Pending" %}
+
+<form
+    method="POST"
+    action="/confirm-deposit/{{ request[0] }}"
+    style="margin-top: 10px;"
+>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button
+        type="submit"
+        class="dashboard-main-button"
+        onclick="return confirm('Confirm that the security deposit has been received?');"
+    >
+        🔒 Confirm Deposit
+    </button>
+</form>
+
+{% elif request[7] == "Held" %}
+
+<p style="margin-top: 10px;">
+    🔒 Deposit held
+</p>
+{% if request[5] == "Completed" %}
+
+    {% if request[10] == "Not Checked" %}
+
+    <form
+        method="POST"
+        action="/damage-status/{{ request[0] }}/good"
+        style="margin-top: 10px;"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button
+            type="submit"
+            class="dashboard-main-button"
+        >
+            ✅ Good Condition
+        </button>
+    </form>
+
+    <form
+        method="POST"
+        action="/damage-status/{{ request[0] }}/damaged"
+        style="margin-top: 10px;"
+    >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <textarea
+    name="damage_report"
+    placeholder="Describe the damage..."
+    required
+    style="width: 100%; padding: 10px; margin-bottom: 10px;"
+></textarea>
+<input
+    type="number"
+    name="damage_charge"
+    min="0"
+    step="0.01"
+    placeholder="Damage charge (¥)"
+    required
+    style="width: 100%; padding: 10px; margin-bottom: 10px;"
+>
+        <button
+            type="submit"
+            class="dashboard-main-button"
+        >
+            ⚠️ Damaged
+        </button>
+    </form>
+
+    {% elif request[10] == "Good Condition" %}
+
+    <p style="margin-top: 10px;">
+        ✅ Item checked: Good Condition
+    </p>
+
+    <form
+        method="POST"
+        action="/refund-deposit/{{ request[0] }}"
+        style="margin-top: 10px;"
+    >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button
+            type="submit"
+            class="dashboard-main-button"
+            onclick="return confirm('Refund this security deposit?');"
+        >
+            ↩️ Refund Deposit
+        </button>
+    </form>
+
+    {% elif request[10] == "Damaged" %}
+
+    <p style="margin-top: 10px;">
+        ⚠️ Item marked as damaged. Deposit remains held.
+    </p>
+
+    {% endif %}
+
+{% endif %}
+{% endif %}
+
+           {% if request[5] == "Pending" %}
+
+{% if request[23] == "Confirmed" %}
+
+<div style="
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #d4e3f7;
+    border-radius: 10px;
+">
+
+    <h4>✅ Equipment Meetup Confirmed</h4>
+
+    <p>
+        <strong>Meetup Date and Time:</strong>
+        {{ request[24] | replace('T', ' ') }}
+    </p>
+
+    <p>
+        <strong>Meetup Location:</strong>
+        {{ request[25] }}
+    </p>
+
+    <p>
+        The borrower has confirmed the meetup.
+        Inspect the equipment together before
+        proceeding with payment and handover.
+    </p>
+
+<!-- INSPECTION VERIFICATION STATUS -->
+
+<div style="
+    margin-top: 15px;
+    padding: 15px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+">
+
+    <h4>Equipment Inspection Status</h4>
+
+    <p>
+        <strong>Amanda (Owner):</strong>
+        {% if request[26] %}
+            ✅ Verified
+        {% else %}
+            ⏳ Pending
+        {% endif %}
+    </p>
+
+    <p>
+        <strong>Joe (Borrower):</strong>
+        {% if request[27] %}
+            ✅ Verified
+        {% else %}
+            ⏳ Pending
+        {% endif %}
+    </p>
+
+    {% if request[26] and request[27] %}
+        <p style="color: green;">
+            ✅ Both parties have verified the inspection.
+        </p>
+    {% else %}
+        <p>
+            Both parties must confirm the inspection
+            before proceeding to payment and handover.
+        </p>
+    {% endif %}
+
+</div>
+
+<!-- AMANDA: CONFIRM EQUIPMENT INSPECTION -->
+
+<form
+    action="{{ url_for('verify_equipment_inspection', request_id=request[0]) }}"
+    method="POST"
+    style="margin-top: 15px;"
+><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button
+        type="submit"
+        style="
+            background: #198754;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+        "
+    >
+        ✅ Confirm Equipment Inspection
+    </button>
+</form>
+
+<p style="font-size: 12px; color: #666;">
+    Confirm only after the physical meetup and
+    equipment inspection.
+</p>
+
+</div>
+
+{% else %}
+
+<!-- SCHEDULE MEETUP FORM -->
+<form
+    method="POST"
+    action="{{ url_for('schedule_meetup', request_id=request[0]) }}"
+    style="margin-top: 10px;"
+>
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <h4>Schedule Equipment Meetup</h4>
+
+    <p>
+        Arrange a meeting so both students can
+        inspect the equipment before renting.
+    </p>
+
+    <label for="meetup_at_{{ request[0] }}">
+        Meetup Date and Time
+    </label>
+
+    <input
+        type="datetime-local"
+        id="meetup_at_{{ request[0] }}"
+        name="meetup_at"
+        required
+    >
+
+    <label for="meetup_location_{{ request[0] }}">
+        Meetup Location
+    </label>
+
+    <input
+        type="text"
+        id="meetup_location_{{ request[0] }}"
+        name="meetup_location"
+        placeholder="Example: University Library Entrance"
+        maxlength="200"
+        required
+    >
+
+    <button
+        type="submit"
+        class="dashboard-main-button"
+        style="margin-top: 10px;"
+    >
+        Schedule Meetup
+    </button>
+</form>
+{% endif %}
 <form
     method="POST"
     action="/requests/{{ request[0] }}/reject"
     style="margin-top: 10px;"
 >
-    <button
+   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+   <button
         type="submit"
         class="secondary-button"
     >
@@ -122,17 +591,22 @@
     </button>
 </form>
 
-{% elif request[5] == "Approved" %}
+{% elif request[5] in ("Approved", "Overdue") %}
 
 <p>
+    {% if request[5] == "Overdue" %}
+    ⚠️ This rental is overdue. The agreed return date has passed.
+    {% else %}
     ✅ This rental is currently active.
+    {% endif %}
 </p>
 
 <form
     method="POST"
     action="/requests/{{ request[0] }}/complete"
 >
-    <button
+   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+   <button
         type="submit"
         class="dashboard-main-button"
     >
@@ -145,6 +619,16 @@
 <p>
     ✅ Rental completed and equipment returned.
 </p>
+{% if request[14] %}
+<p>⭐ You have reviewed the borrower.</p>
+{% else %}
+<a
+    href="{{ url_for('rate_owner', request_id=request[0]) }}"
+    class="dashboard-main-button"
+>
+    ⭐ Rate Borrower
+</a>
+{% endif %}
 
 {% else %}
 
