@@ -7,6 +7,7 @@ import smtplib
 import uuid
 
 import qrcode
+from PIL import Image, ImageOps, UnidentifiedImageError
 from flask import current_app, redirect, render_template, request, send_file, session, url_for
 from itsdangerous import BadSignature, SignatureExpired
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -1459,7 +1460,14 @@ def approve_request(request_id):
 
     if "user_id" not in session:
         return redirect(url_for("login"))
-
+    # Temporarily block approval until the new
+    # meetup, inspection, and payment workflow is ready.
+    return error_response(
+        "Approval requires meetup verification, "
+        "equipment inspection, and payment.",
+        409,
+        "Approval not available yet",
+    )
     connection = connect_database(application.DATABASE)
 
     request_data = connection.execute(
@@ -1525,7 +1533,548 @@ def approve_request(request_id):
         url_for("owner_requests")
     )
 
+# =====================================================
+# SCHEDULE EQUIPMENT MEETUP
+# =====================================================
 
+@app.route(
+    "/requests/<int:request_id>/schedule-meetup",
+    methods=["POST"]
+)
+def schedule_meetup(request_id):
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    meetup_date = request.form.get("meetup_at", "").strip()
+    meetup_location = request.form.get(
+        "meetup_location", ""
+    ).strip()
+
+    # Check meetup date and time
+    try:
+        meetup_datetime = datetime.strptime(
+            meetup_date, "%Y-%m-%dT%H:%M"
+        )
+    except ValueError:
+        return error_response(
+            "Please choose a valid meetup date and time."
+        )
+
+    if meetup_datetime <= datetime.now():
+        return error_response(
+            "The meetup must be scheduled for a future time."
+        )
+
+    # Check meetup location
+    if not meetup_location or len(meetup_location) > 200:
+        return error_response(
+            "Enter a meetup location of 1 to 200 characters."
+        )
+
+    connection = connect_database(application.DATABASE)
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        rental = connection.execute(
+            """
+            SELECT
+                borrowing_requests.borrower_id,
+                equipment.item_name
+            FROM borrowing_requests
+            JOIN equipment
+                ON borrowing_requests.equipment_id = equipment.id
+            WHERE borrowing_requests.id = ?
+              AND equipment.owner_id = ?
+              AND borrowing_requests.status = 'Pending'
+              AND borrowing_requests.meetup_status
+                  IN ('Not Scheduled', 'Proposed')
+            """,
+            (request_id, session["user_id"])
+        ).fetchone()
+
+        if rental is None:
+            return error_response(
+                "This request cannot be scheduled.",
+                409
+            )
+
+        connection.execute(
+            """
+            UPDATE borrowing_requests
+            SET meetup_at = ?,
+                meetup_location = ?,
+                meetup_status = 'Proposed',
+                meetup_proposed_at = CURRENT_TIMESTAMP,
+                meetup_confirmed_at = NULL,
+                meetup_owner_verified_at = NULL,
+                meetup_borrower_verified_at = NULL
+            WHERE id = ?
+              AND status = 'Pending'
+            """,
+            (
+                meetup_datetime.isoformat(timespec="minutes"),
+                meetup_location,
+                request_id
+            )
+        )
+
+        add_notification(
+            connection,
+            rental[0],
+            f"The owner has proposed a meetup for "
+            f"{rental[1]}. Please review the details.",
+            url_for("my_rentals")
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("owner_requests"))
+
+# =====================================================
+# BORROWER CONFIRMS MEETUP
+# =====================================================
+
+@app.route(
+    "/requests/<int:request_id>/confirm-meetup",
+    methods=["POST"]
+)
+def confirm_meetup(request_id):
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    connection = connect_database(application.DATABASE)
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        rental = connection.execute(
+            """
+            SELECT
+                borrowing_requests.borrower_id,
+                equipment.owner_id,
+                equipment.item_name,
+                borrowing_requests.meetup_at
+            FROM borrowing_requests
+            JOIN equipment
+                ON borrowing_requests.equipment_id = equipment.id
+            WHERE borrowing_requests.id = ?
+              AND borrowing_requests.borrower_id = ?
+              AND borrowing_requests.status = 'Pending'
+              AND borrowing_requests.meetup_status = 'Proposed'
+            """,
+            (request_id, session["user_id"])
+        ).fetchone()
+
+        if rental is None:
+            return error_response(
+                "No proposed meetup is available for confirmation.",
+                409
+            )
+
+        if (
+            not rental[3]
+            or datetime.fromisoformat(rental[3]) <= datetime.now()
+        ):
+            return error_response(
+                "This meetup time has passed. Ask the owner to reschedule.",
+                409
+            )
+
+        cursor = connection.execute(
+            """
+            UPDATE borrowing_requests
+            SET meetup_status = 'Confirmed',
+                meetup_confirmed_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+              AND borrower_id = ?
+              AND status = 'Pending'
+              AND meetup_status = 'Proposed'
+            """,
+            (request_id, session["user_id"])
+        )
+
+        if cursor.rowcount != 1:
+            return error_response(
+                "This meetup can no longer be confirmed.",
+                409
+            )
+
+        add_notification(
+            connection,
+            rental[1],
+            f"The borrower has confirmed the meetup "
+            f"for {rental[2]}.",
+            url_for("owner_requests")
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("my_rentals"))
+
+
+# =====================================================
+# UPLOAD EQUIPMENT PICKUP INSPECTION PHOTO
+# =====================================================
+
+@app.route(
+    "/rentals/<int:request_id>/inspection-photo",
+    methods=["POST"]
+)
+def upload_pickup_inspection_photo(request_id):
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    photo = request.files.get("inspection_photo")
+
+    if photo is None or not photo.filename:
+        return error_response("Please select a photo.", 400)
+
+    # Limit uploads to 5 MB
+    max_size = 5 * 1024 * 1024
+    photo_bytes = photo.read(max_size + 1)
+
+    if len(photo_bytes) > max_size:
+        return error_response(
+            "Photo must be 5 MB or smaller.", 400
+        )
+
+    # Check the image and remove original metadata
+    try:
+        with Image.open(io.BytesIO(photo_bytes)) as original:
+
+            if original.format not in {"JPEG", "PNG", "WEBP"}:
+                return error_response(
+                    "Use a JPG, PNG, or WebP image.", 400
+                )
+
+            if original.width * original.height > 20000000:
+                return error_response(
+                    "Image dimensions are too large.", 400
+                )
+
+            cleaned = ImageOps.exif_transpose(original)
+            cleaned = cleaned.convert("RGB")
+            cleaned.thumbnail((1600, 1600))
+
+            output = io.BytesIO()
+            cleaned.save(
+                output,
+                format="JPEG",
+                quality=85
+            )
+
+    except (
+        UnidentifiedImageError,
+        OSError,
+        ValueError,
+        Image.DecompressionBombError
+    ):
+        return error_response(
+            "The selected image is invalid.", 400
+        )
+
+    connection = connect_database(application.DATABASE)
+    saved_path = None
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        # Check that this borrower has a confirmed meetup
+        rental = connection.execute(
+            """
+            SELECT id
+            FROM borrowing_requests
+            WHERE id = ?
+              AND borrower_id = ?
+              AND status = 'Pending'
+            
+              AND meetup_status = 'Confirmed'
+              AND meetup_at IS NOT NULL
+              AND meetup_at <= ?
+            """,
+            (
+                request_id,
+                                  "Pickup photos can only be uploaded by the borrower "
+                    "after the confirmed meetup time.",
+            )
+        ).fetchone()
+
+
+        if rental is None:
+            return error_response(
+                "Only the borrower with a confirmed meetup "
+                "can upload pickup inspection photos.",
+                403
+            )
+
+        # Allow at most five pickup photos
+        photo_count = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM rental_condition_photos
+            WHERE borrowing_request_id = ?
+              AND stage = 'pickup'
+            """,
+            (request_id,)
+        ).fetchone()[0]
+
+        if photo_count >= 5:
+            return error_response(
+                "Maximum of five pickup photos allowed.",
+                400
+            )
+
+        # Save outside the public static folder
+        folder = os.path.join(
+            current_app.instance_path,
+            "inspection_photos"
+        )
+
+        os.makedirs(folder, exist_ok=True)
+
+        filename = uuid.uuid4().hex + ".jpg"
+        saved_path = os.path.join(folder, filename)
+
+        with open(saved_path, "xb") as image_file:
+            image_file.write(output.getvalue())
+
+        # Link photo to the borrowing request
+        connection.execute(
+            """
+            INSERT INTO rental_condition_photos
+                (
+                    borrowing_request_id,
+                    uploaded_by,
+                    stage,
+                    image_path
+                )
+            VALUES (?, ?, 'pickup', ?)
+            """,
+            (
+                request_id,
+                session["user_id"],
+                filename
+            )
+        )
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+
+        if saved_path and os.path.isfile(saved_path):
+            os.remove(saved_path)
+
+        raise
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("my_rentals"))
+
+# =====================================================
+# VIEW EQUIPMENT INSPECTION PHOTO SECURELY
+# =====================================================
+
+@app.route("/inspection-photos/<int:photo_id>")
+def view_inspection_photo(photo_id):
+
+    # User must be logged in
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    connection = connect_database(application.DATABASE)
+
+    try:
+        # Only the borrower or equipment owner can view
+        # photographs belonging to their rental.
+        photo = connection.execute(
+            """
+            SELECT rental_condition_photos.image_path
+            FROM rental_condition_photos
+
+            JOIN borrowing_requests
+                ON rental_condition_photos.borrowing_request_id =
+                   borrowing_requests.id
+
+            JOIN equipment
+                ON borrowing_requests.equipment_id = equipment.id
+
+            WHERE rental_condition_photos.id = ?
+              AND (
+                  borrowing_requests.borrower_id = ?
+                  OR equipment.owner_id = ?
+              )
+            """,
+            (
+                photo_id,
+                session["user_id"],
+                session["user_id"]
+            )
+        ).fetchone()
+
+    finally:
+        connection.close()
+
+    if photo is None:
+        return error_response(
+            "Photo not found or access denied.",
+            404
+        )
+
+    filename = photo[0]
+
+    # Prevent unsafe file paths
+    if (
+        not filename
+        or os.path.basename(filename) != filename
+        or not filename.lower().endswith(".jpg")
+    ):
+        return error_response(
+            "Invalid photo path.",
+            400
+        )
+
+    folder = os.path.realpath(
+        os.path.join(
+            current_app.instance_path,
+            "inspection_photos"
+        )
+    )
+
+    photo_path = os.path.realpath(
+        os.path.join(folder, filename)
+    )
+
+    if (
+        os.path.commonpath((folder, photo_path)) != folder
+        or not os.path.isfile(photo_path)
+    ):
+        return error_response(
+            "Photo file not found.",
+            404
+        )
+
+    response = send_file(
+        photo_path,
+        mimetype="image/jpeg"
+    )
+
+    response.headers["Cache-Control"] = "private, no-store"
+
+    return response
+
+# =====================================================
+# VERIFY EQUIPMENT INSPECTION
+# =====================================================
+
+@app.route(
+    "/rentals/<int:request_id>/verify-inspection",
+    methods=["POST"]
+)
+def verify_equipment_inspection(request_id):
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+    connection = connect_database(application.DATABASE)
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        rental = connection.execute(
+            """
+            SELECT
+                br.borrower_id,
+                e.owner_id
+            FROM borrowing_requests AS br
+            JOIN equipment AS e
+                ON br.equipment_id = e.id
+            WHERE br.id = ?
+              AND br.status = 'Pending'
+              AND br.meetup_status = 'Confirmed'
+              AND br.meetup_at IS NOT NULL
+              AND datetime('now', '+8 hours')
+                  >= datetime(br.meetup_at)
+              AND EXISTS (
+                  SELECT 1
+                  FROM rental_condition_photos AS p
+                  WHERE p.borrowing_request_id = br.id
+                    AND p.stage = 'pickup'
+                    AND datetime(p.created_at, '+8 hours')
+                        >= datetime(br.meetup_at)
+              )
+            """,
+            (request_id,)
+        ).fetchone()
+
+        if rental is None:
+            return error_response(
+                "Inspection verification requires a confirmed "
+                "meetup that has started and a new pickup photo "
+                "taken and uploaded after the meetup.",
+                403
+            )
+
+        borrower_id, owner_id = rental
+
+        if user_id == borrower_id:
+
+            connection.execute(
+                """
+                UPDATE borrowing_requests
+                SET meetup_borrower_verified_at =
+                    COALESCE(
+                        meetup_borrower_verified_at,
+                        CURRENT_TIMESTAMP
+                    )
+                WHERE id = ?
+                """,
+                (request_id,)
+            )
+
+            destination = "my_rentals"
+
+        elif user_id == owner_id:
+
+            connection.execute(
+                """
+                UPDATE borrowing_requests
+                SET meetup_owner_verified_at =
+                    COALESCE(
+                        meetup_owner_verified_at,
+                        CURRENT_TIMESTAMP
+                    )
+                WHERE id = ?
+                """,
+                (request_id,)
+            )
+
+            destination = "owner_requests"
+
+        else:
+            return error_response(
+                "You cannot verify this inspection.",
+                403
+            )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+    return redirect(url_for(destination))
 # =====================================================
 # REJECT REQUEST
 # =====================================================
@@ -1611,7 +2160,7 @@ def my_rentals():
         return redirect(url_for("login"))
 
     connection = connect_database(application.DATABASE)
-
+    connection.row_factory = sqlite3.Row
     rentals = connection.execute(
         """
         SELECT
@@ -1666,8 +2215,12 @@ CASE
     )
     THEN 1
     ELSE 0
-END AS damage_dispute_window_open
-        FROM borrowing_requests
+END AS damage_dispute_window_open,
+borrowing_requests.meetup_status,
+borrowing_requests.meetup_at,
+borrowing_requests.meetup_location,
+equipment.image_path
+FROM borrowing_requests
 
         JOIN equipment
         ON borrowing_requests.equipment_id = equipment.id
@@ -1682,12 +2235,53 @@ END AS damage_dispute_window_open
         (session["user_id"], session["user_id"])
     ).fetchall()
 
+   
+    # =============================================
+    # GET INSPECTION PHOTOS FOR MY RENTALS
+    # =============================================
+
+    photos = connection.execute(
+        """
+        SELECT
+            p.id,
+            p.borrowing_request_id,
+            p.stage,
+            p.created_at
+        FROM rental_condition_photos AS p
+
+        JOIN borrowing_requests AS br
+            ON p.borrowing_request_id = br.id
+
+        WHERE br.borrower_id = ?
+
+        ORDER BY p.created_at ASC, p.id ASC
+        """,
+        (session["user_id"],)
+    ).fetchall()
+
+    # Group photos by rental request
+    photos_by_rental = {}
+
+    for photo in photos:
+        request_id = photo[1]
+
+        if request_id not in photos_by_rental:
+            photos_by_rental[request_id] = []
+
+        photos_by_rental[request_id].append({
+            "id": photo[0],
+            "stage": photo[2],
+            "created_at": photo[3]
+        })
+
     connection.close()
 
     return render_template(
         "my_rentals.html",
-        rentals=rentals
+        rentals=rentals,
+        photos_by_rental=photos_by_rental
     )
+
 # =====================================================
 # MY LISTINGS
 # =====================================================
@@ -2365,8 +2959,17 @@ def owner_requests():
                  AND borrowing_requests.damage_dispute_status != 'Pending'
                 THEN 1
                 ELSE 0
-            END AS damage_settlement_allowed
-        FROM borrowing_requests
+           
+END AS damage_settlement_allowed,
+borrowing_requests.meetup_status,
+borrowing_requests.meetup_at,
+
+borrowing_requests.meetup_location,
+borrowing_requests.meetup_owner_verified_at,
+borrowing_requests.meetup_borrower_verified_at
+
+FROM borrowing_requests
+ 
         JOIN equipment
             ON borrowing_requests.equipment_id = equipment.id
         JOIN users
@@ -2376,12 +2979,55 @@ def owner_requests():
         """,
         (session["user_id"],)
     ).fetchall()
+   
+    # =============================================
+    # GET INSPECTION PHOTOS FOR EQUIPMENT OWNERS
+    # =============================================
+
+    photos = connection.execute(
+        """
+        SELECT
+            p.id,
+            p.borrowing_request_id,
+            p.stage,
+            p.created_at
+        FROM rental_condition_photos AS p
+
+        JOIN borrowing_requests AS br
+            ON p.borrowing_request_id = br.id
+
+        JOIN equipment AS e
+            ON br.equipment_id = e.id
+
+        WHERE e.owner_id = ?
+
+        ORDER BY p.created_at ASC, p.id ASC
+        """,
+        (session["user_id"],)
+    ).fetchall()
+
+    photos_by_request = {}
+
+    for photo in photos:
+        request_id = photo[1]
+
+        if request_id not in photos_by_request:
+            photos_by_request[request_id] = []
+
+        photos_by_request[request_id].append({
+            "id": photo[0],
+            "stage": photo[2],
+            "created_at": photo[3]
+        })
+
     connection.close()
 
     return render_template(
         "requests.html",
-        requests_list=requests_data
+        requests_list=requests_data,
+        photos_by_request=photos_by_request
     )
+
 @app.route("/students")
 def students():
 

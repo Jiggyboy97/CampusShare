@@ -73,6 +73,74 @@
                 {{ request[1] }}
             </h2>
 
+<!-- OWNER INSPECTION PHOTO GALLERY -->
+
+{% set inspection_photos = photos_by_request.get(request[0], []) %}
+
+{% if inspection_photos %}
+
+<div style="margin-top: 20px; margin-bottom: 20px;">
+
+    <h4>Equipment Inspection Photographs</h4>
+
+    <p>
+        {{ inspection_photos|length }}
+        photograph(s) uploaded for this rental.
+    </p>
+
+    <div style="
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 15px;
+    ">
+
+        {% for photo in inspection_photos %}
+
+        <div style="
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 8px;
+        ">
+
+            <a
+                href="{{ url_for('view_inspection_photo', photo_id=photo['id']) }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+
+                <img
+                    src="{{ url_for('view_inspection_photo', photo_id=photo['id']) }}"
+                    alt="Equipment inspection photograph"
+                    loading="lazy"
+                    style="
+                        width: 100%;
+                        height: 150px;
+                        object-fit: cover;
+                        border-radius: 8px;
+                    "
+                >
+
+            </a>
+
+            <p style="font-size: 13px; margin-top: 8px;">
+                {{ photo['stage']|capitalize }} Inspection
+            </p>
+
+            <p style="font-size: 12px;">
+                {{ photo['created_at'] }}
+            </p>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endif %}
+
             <p>
                 <strong>Requested by:</strong>
                 {{ request[2] }}
@@ -356,19 +424,159 @@
 
            {% if request[5] == "Pending" %}
 
+{% if request[23] == "Confirmed" %}
+
+<div style="
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #d4e3f7;
+    border-radius: 10px;
+">
+
+    <h4>✅ Equipment Meetup Confirmed</h4>
+
+    <p>
+        <strong>Meetup Date and Time:</strong>
+        {{ request[24] | replace('T', ' ') }}
+    </p>
+
+    <p>
+        <strong>Meetup Location:</strong>
+        {{ request[25] }}
+    </p>
+
+    <p>
+        The borrower has confirmed the meetup.
+        Inspect the equipment together before
+        proceeding with payment and handover.
+    </p>
+
+<!-- INSPECTION VERIFICATION STATUS -->
+
+<div style="
+    margin-top: 15px;
+    padding: 15px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+">
+
+    <h4>Equipment Inspection Status</h4>
+
+    <p>
+        <strong>Amanda (Owner):</strong>
+        {% if request[26] %}
+            ✅ Verified
+        {% else %}
+            ⏳ Pending
+        {% endif %}
+    </p>
+
+    <p>
+        <strong>Joe (Borrower):</strong>
+        {% if request[27] %}
+            ✅ Verified
+        {% else %}
+            ⏳ Pending
+        {% endif %}
+    </p>
+
+    {% if request[26] and request[27] %}
+        <p style="color: green;">
+            ✅ Both parties have verified the inspection.
+        </p>
+    {% else %}
+        <p>
+            Both parties must confirm the inspection
+            before proceeding to payment and handover.
+        </p>
+    {% endif %}
+
+</div>
+
+<!-- AMANDA: CONFIRM EQUIPMENT INSPECTION -->
+
 <form
+    action="{{ url_for('verify_equipment_inspection', request_id=request[0]) }}"
     method="POST"
-    action="/requests/{{ request[0] }}/approve"
->
-   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-   <button
+    style="margin-top: 15px;"
+><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button
         type="submit"
-        class="dashboard-main-button"
+        style="
+            background: #198754;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+        "
     >
-        Approve
+        ✅ Confirm Equipment Inspection
     </button>
 </form>
 
+<p style="font-size: 12px; color: #666;">
+    Confirm only after the physical meetup and
+    equipment inspection.
+</p>
+
+</div>
+
+{% else %}
+
+<!-- SCHEDULE MEETUP FORM -->
+<form
+    method="POST"
+    action="{{ url_for('schedule_meetup', request_id=request[0]) }}"
+    style="margin-top: 10px;"
+>
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <h4>Schedule Equipment Meetup</h4>
+
+    <p>
+        Arrange a meeting so both students can
+        inspect the equipment before renting.
+    </p>
+
+    <label for="meetup_at_{{ request[0] }}">
+        Meetup Date and Time
+    </label>
+
+    <input
+        type="datetime-local"
+        id="meetup_at_{{ request[0] }}"
+        name="meetup_at"
+        required
+    >
+
+    <label for="meetup_location_{{ request[0] }}">
+        Meetup Location
+    </label>
+
+    <input
+        type="text"
+        id="meetup_location_{{ request[0] }}"
+        name="meetup_location"
+        placeholder="Example: University Library Entrance"
+        maxlength="200"
+        required
+    >
+
+    <button
+        type="submit"
+        class="dashboard-main-button"
+        style="margin-top: 10px;"
+    >
+        Schedule Meetup
+    </button>
+</form>
+{% endif %}
 <form
     method="POST"
     action="/requests/{{ request[0] }}/reject"

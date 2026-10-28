@@ -504,10 +504,44 @@ def init_db():
                 "damage_dispute_reason":
                     "TEXT NOT NULL DEFAULT ''",
 
-                "damage_dispute_resolution":
-                    "TEXT NOT NULL DEFAULT ''"
+               "damage_dispute_resolution":
+    "TEXT NOT NULL DEFAULT ''",
+
+"meetup_at": "TEXT",
+"meetup_location": "TEXT",
+"meetup_status": "TEXT NOT NULL DEFAULT 'Not Scheduled'",
+"meetup_proposed_at": "TEXT",
+"meetup_confirmed_at": "TEXT",
+"meetup_owner_verified_at": "TEXT",
+"meetup_borrower_verified_at": "TEXT"
             }
         )
+        # =============================================
+        # EQUIPMENT INSPECTION PHOTOS
+        # =============================================
+
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS rental_condition_photos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                borrowing_request_id INTEGER NOT NULL,
+
+                uploaded_by INTEGER NOT NULL,
+
+                stage TEXT NOT NULL
+                    CHECK (stage IN ('pickup', 'return')),
+
+                image_path TEXT NOT NULL,
+
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (borrowing_request_id)
+                    REFERENCES borrowing_requests(id),
+
+                FOREIGN KEY (uploaded_by)
+                    REFERENCES users(id)
+            )
+        """)
 
         # =============================================
         # RATINGS AND REVIEWS
