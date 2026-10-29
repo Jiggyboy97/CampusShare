@@ -516,6 +516,46 @@
     </button>
 </form>
 
+<!-- OWNER: REJECT EQUIPMENT INSPECTION -->
+
+<form
+    action="{{ url_for('reject_equipment_inspection', request_id=request[0]) }}"
+    method="POST"
+    style="margin-top: 15px;"
+>
+    <input type="hidden"
+           name="csrf_token"
+           value="{{ csrf_token() }}">
+
+    <label>
+        <strong>Reason for rejecting inspection:</strong>
+    </label>
+
+    <textarea
+        name="inspection_rejection_reason"
+        rows="3"
+        minlength="10"
+        maxlength="500"
+        required
+        placeholder="Explain why the equipment was rejected..."
+        style="width: 100%; padding: 10px; margin-top: 8px;"
+    ></textarea>
+
+    <button
+        type="submit"
+        style="
+            background: #dc3545;
+            color: white;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        "
+    >
+        ❌ Reject Equipment Inspection
+    </button>
+</form>
+
 <p style="font-size: 12px; color: #666;">
     Confirm only after the physical meetup and
     equipment inspection.
@@ -577,6 +617,34 @@
     </button>
 </form>
 {% endif %}
+
+{% if request[5] == "Pending"
+      and request[6] == "Paid"
+      and request[23] == "Confirmed"
+      and request[26] is not none
+      and request[27] is not none %}
+
+<form
+    method="POST"
+    action="{{ url_for('approve_request', request_id=request[0]) }}"
+    style="margin-top: 10px;"
+>
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <button
+        type="submit"
+        class="dashboard-main-button"
+    >
+        Confirm Equipment Handover
+    </button>
+</form>
+
+{% endif %}
+{% if request[6] == "Unpaid" %}
 <form
     method="POST"
     action="/requests/{{ request[0] }}/reject"
@@ -590,6 +658,7 @@
         Reject
     </button>
 </form>
+{% endif %}
 
 {% elif request[5] in ("Approved", "Overdue") %}
 

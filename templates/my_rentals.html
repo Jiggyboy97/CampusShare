@@ -214,18 +214,46 @@
 
 
             <!-- QR PAYMENT BUTTON -->
-            {% if rental[5] in ("Approved", "Overdue")
-                  and rental[6] == "Unpaid" %}
+
+{% if rental[6] == "Unpaid" and (
+    (rental[5] in ("Approved", "Overdue")
+     and rental[32] is none)
+    or
+    (rental[5] == "Pending"
+     and rental[26] == "Confirmed"
+     and rental[30] is not none
+     and rental[31] is not none
+     and rental[32] is none)
+) %}
+
 
                 <a
                     href="{{ url_for('qr_payment', request_id=rental[0]) }}"
                     class="dashboard-main-button"
                     style="margin-top: 10px; display: inline-block;"
                 >
-                    📱 Pay with QR Code
+                    📱 Proceed to Demo Payment
                 </a>
 
             {% endif %}
+
+<!-- READ-ONLY QR PAYMENT PREVIEW -->
+<a
+    href="{{ url_for('qr_demo_preview', request_id=rental[0]) }}"
+    class="dashboard-main-button"
+    style="
+        display: inline-block;
+        margin-top: 10px;
+        background: #475569;
+        color: white;
+    "
+>
+    📱 Preview Demo QR Payment
+</a>
+
+<p style="font-size: 12px; color: #666;">
+    Preview only. No payment will be made.
+</p>
 
 
             <!-- DAMAGE INFORMATION -->
@@ -477,9 +505,51 @@
                 cursor: pointer;
             "
         >
-            ✅ Confirm Equipment Inspection
+            ✅ Accept Equipment Condition & Continue Rental
         </button>
     </form>
+
+<!-- BORROWER: REJECT EQUIPMENT INSPECTION -->
+
+<form
+    action="{{ url_for('reject_equipment_inspection', request_id=rental[0]) }}"
+    method="POST"
+    style="margin-top: 15px;"
+>
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <label>
+        <strong>Reason for rejecting the equipment:</strong>
+    </label>
+
+    <textarea
+        name="inspection_rejection_reason"
+        rows="3"
+        minlength="10"
+        maxlength="500"
+        required
+        placeholder="Explain why the equipment failed inspection..."
+        style="width: 100%; padding: 10px; margin-top: 8px;"
+    ></textarea>
+
+    <button
+        type="submit"
+        style="
+            background: #dc3545;
+            color: white;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        "
+    >
+❌ Decline Rental After Inspection
+    </button>
+</form>
 
     <p style="font-size: 12px; color: #666;">
         Only confirm after inspecting the equipment
@@ -538,7 +608,7 @@
 
                         </form>
 
-                   
+
 <!-- SAVED INSPECTION PHOTOGRAPHS -->
 
 {% set inspection_photos = photos_by_rental.get(rental[0], []) %}
@@ -599,9 +669,9 @@
 
 {% endif %}
 
-                   
+
                     </div>
-                
+
 
 
                 <!-- PROPOSED MEETUP -->
