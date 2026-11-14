@@ -96,51 +96,94 @@ def enforce_account_status():
 def mark_overdue_rentals():
     connection = connect_database(application.DATABASE, timeout=30)
     connection.execute("PRAGMA busy_timeout = 30000")
-    connection.execute("BEGIN IMMEDIATE")
-    overdue_rentals = connection.execute(
-        """
-        SELECT borrowing_requests.id, borrowing_requests.borrower_id,
-               equipment.item_name
-        FROM borrowing_requests
-        JOIN equipment ON borrowing_requests.equipment_id = equipment.id
-        WHERE borrowing_requests.status IN ('Approved', 'Overdue')
-          AND borrowing_requests.awaiting_handover = 0
-          AND date(borrowing_requests.end_date) < date('now', 'localtime')
-        """
-    ).fetchall()
 
-    for request_id, borrower_id, item_name in overdue_rentals:
-        connection.execute(
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        overdue_rentals = connection.execute(
             """
-            UPDATE borrowing_requests
-            SET status = 'Overdue'
-            WHERE id = ?
-              AND status = 'Approved'
-              AND awaiting_handover = 0
-              AND date(end_date) < date('now', 'localtime')
-            """,
-            (request_id,),
-        )
-        reminder = connection.execute(
+            SELECT borrowing_requests.id,
+                   borrowing_requests.borrower_id,
+                   equipment.item_name
+            FROM borrowing_requests
+            JOIN equipment
+              ON borrowing_requests.equipment_id = equipment.id
+            WHERE borrowing_requests.status IN ('Approved', 'Overdue')
+              AND borrowing_requests.awaiting_handover = 0
+              AND (
+                  (
+                      borrowing_requests.price_unit = 'hour'
+                      AND borrowing_requests.end_time IS NOT NULL
+                      AND datetime(
+                          borrowing_requests.end_date || ' ' ||
+                          borrowing_requests.end_time
+                      ) < datetime('now', 'localtime')
+                  )
+                  OR
+                  (
+                      COALESCE(
+                          borrowing_requests.price_unit, 'day'
+                      ) <> 'hour'
+                      AND date(borrowing_requests.end_date)
+                          < date('now', 'localtime')
+                  )
+              )
             """
-            INSERT OR IGNORE INTO rental_reminders (
-                borrowing_request_id, reminder_type
-            )
-            VALUES (?, 'rental_overdue')
-            """,
-            (request_id,),
-        )
-        if reminder.rowcount:
-            add_notification(
-                connection,
-                borrower_id,
-                f"Your rental of {item_name} is overdue. Please return it "
-                "as soon as possible.",
-                url_for("my_rentals"),
+        ).fetchall()
+
+        for request_id, borrower_id, item_name in overdue_rentals:
+            connection.execute(
+                """
+                UPDATE borrowing_requests
+                SET status = 'Overdue'
+                WHERE id = ?
+                  AND status = 'Approved'
+                  AND awaiting_handover = 0
+                  AND (
+                      (
+                          price_unit = 'hour'
+                          AND end_time IS NOT NULL
+                          AND datetime(end_date || ' ' || end_time)
+                              < datetime('now', 'localtime')
+                      )
+                      OR
+                      (
+                          COALESCE(price_unit, 'day') <> 'hour'
+                          AND date(end_date)
+                              < date('now', 'localtime')
+                      )
+                  )
+                """,
+                (request_id,),
             )
 
-    connection.commit()
-    connection.close()
+            reminder = connection.execute(
+                """
+                INSERT OR IGNORE INTO rental_reminders (
+                    borrowing_request_id, reminder_type
+                )
+                VALUES (?, 'rental_overdue')
+                """,
+                (request_id,),
+            )
+
+            if reminder.rowcount:
+                add_notification(
+                    connection,
+                    borrower_id,
+                    f"Your rental of {item_name} is overdue. "
+                    "Please return it as soon as possible.",
+                    url_for("my_rentals"),
+                )
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
 
 
 def error_response(message, status_code=400, title="Please check your request"):
