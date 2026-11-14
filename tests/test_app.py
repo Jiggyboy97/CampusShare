@@ -1703,10 +1703,10 @@ class RentalWorkflowTests(unittest.TestCase):
             self.sign_in_as(self.owner_id)
             resolution_response = self.client.post(
                 f"/damage-dispute/{request_id}/resolve",
-                data={"resolution": "cancel"},
+                data={"resolution": "uphold"},
             )
             self.assertEqual(resolution_response.status_code, 302)
-
+            self.assertEqual(resolution_response.status_code, 302)
             with self.database_connection() as connection:
                 connection.execute(
                     """
@@ -2620,7 +2620,78 @@ class RentalWorkflowTests(unittest.TestCase):
                         ).fetchone(),
                         (expected_status, expected_status, expected_charge),
                     )
+    def test_cancelled_damage_dispute_allows_refund_not_settlement(self):
+        with self.database_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO borrowing_requests (
+                    equipment_id, borrower_id, start_date, end_date,
+                    status, payment_status, deposit_status
+                )
+                VALUES (?, ?, '2026-11-01', '2026-11-02',
+                        'Completed', 'Paid', 'Held')
+                """,
+                (self.equipment_id, self.borrower_id),
+            )
+            request_id = connection.execute(
+                "SELECT last_insert_rowid()"
+            ).fetchone()[0]
 
+        self.sign_in_as(self.owner_id)
+        response = self.client.post(
+            f"/damage-status/{request_id}/damaged",
+            data={
+                "damage_report": "Broken handle",
+                "damage_charge": "10",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.sign_in_as(self.borrower_id)
+        response = self.client.post(
+            f"/damage-dispute/{request_id}",
+            data={"dispute_reason": "Damage existed before borrowing."},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.sign_in_as(self.owner_id)
+        response = self.client.post(
+            f"/damage-dispute/{request_id}/resolve",
+            data={"resolution": "cancel"},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        with self.database_connection() as connection:
+            connection.execute(
+                """
+                UPDATE borrowing_requests
+                SET damage_reported_at = datetime('now', '-49 hours')
+                WHERE id = ?
+                """,
+                (request_id,),
+            )
+
+        response = self.client.post(f"/settle-damage/{request_id}")
+        self.assertEqual(response.status_code, 409)
+
+        response = self.client.post(f"/refund-deposit/{request_id}")
+        self.assertEqual(response.status_code, 302)
+
+        with self.database_connection() as connection:
+            result = connection.execute(
+                """
+                SELECT deposit_status, damage_dispute_status,
+                       damage_status, damage_charge
+                FROM borrowing_requests
+                WHERE id = ?
+                """,
+                (request_id,),
+            ).fetchone()
+
+        self.assertEqual(
+            result,
+            ("Refunded", "Cancelled", "Damaged", 0.0),
+        )
     def test_owner_can_record_zero_damage_charge(self):
         with self.database_connection() as connection:
             connection.execute(
