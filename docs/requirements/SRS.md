@@ -410,70 +410,84 @@ sequenceDiagram
     actor O as Owner
 
     B->>S: Request item with dates or times
-    S-->>B: Save request as Pending and calculate price
+    S-->>B: Save request as Pending and calculate price (rental fee and deposit shown separately)
     S-->>O: Notify owner of new request
-    O->>S: Approve or reject request
-    S-->>B: Notify borrower of decision
 
-    alt Request rejected
-        S-->>B: Notify rejection
+    alt Owner rejects request
+        O->>S: Reject request
+        S->>S: Reject request (Pending to Rejected)
+        S-->>B: Notify borrower of rejection
         Note over B,O: End rental process
-    else Schedule meetup
-        B->>S: Confirm meetup and inspection
+    else Owner schedules inspection
+        O->>S: Schedule meetup and inspection
+        S-->>B: Notify borrower of the meetup
+        B->>S: Confirm meetup
         Note over B,O: Meet in person and inspect item
 
-        alt Inspection fails
-            B->>S: Report failed inspection
-            S->>S: Reject rental request
+        B->>S: Confirm whether to proceed after inspection
+
+        alt Inspection fails or borrower does not proceed
+            S->>S: Reject request (Pending to Rejected)
             S-->>O: Notify owner of rejection
             S-->>B: Notify borrower of rejection
             Note over B,O: No payment or deposit is made
-        else Inspection approved
-            B->>S: Confirm inspection approval
+        else Borrower proceeds
             S-->>B: Generate simulated QR payment
             B->>S: Pay rental fee using QR payment
             S->>S: Verify simulated rental payment
             S-->>O: Notify owner of successful payment
-
-            B->>S: Pay security deposit
-            S->>S: Record deposit payment
             B->>S: Upload photos of item condition
-            B->>S: Confirm readiness to receive item
-            O->>S: Confirm item handover
-            S-->>B: Start rental countdown
+            B->>S: Pay security deposit
+            S->>S: Record deposit payment (deposit Held)
+            S-->>O: Notify owner that request is ready for approval
 
-            Note over B,O: Borrower uses item during rental period
+            alt Owner rejects request
+                O->>S: Reject request
+                S->>S: Reject request (Pending to Rejected) and refund rental fee and deposit
+                S-->>B: Notify borrower of rejection and refund
+            else Owner approves request
+                O->>S: Approve request
+                S->>S: Approve request (Pending to Approved)
+                S-->>B: Notify borrower of approval
 
-            alt Item returned on time
-                B->>O: Return item
-            else Item returned late
-                B->>O: Return item after deadline
-                S->>S: Calculate late fee
-            end
+                B->>S: Confirm readiness to receive item
+                O->>S: Confirm item handover
+                S-->>B: Start rental countdown
 
-            O->>S: Mark item as returned
-            S-->>B: Notify borrower of return
+                Note over B,O: Borrower uses item during rental period
 
-            alt Item damaged
-                O->>S: Record damage and proposed charge
-                S-->>B: Notify borrower and allow 48 hours to review
-                opt Borrower disputes damage report
-                    B->>S: Submit dispute
-                    O->>S: Review dispute and revise or uphold charge
+                alt Item returned on time
+                    B->>O: Return item
+                else Item returned late
+                    B->>O: Return item after deadline
+                    S->>S: Calculate late fee
                 end
-                S->>S: Deduct agreed charge from deposit
-                S-->>B: Refund remaining deposit
-            else Item in good condition
-                O->>S: Confirm good condition
-                S->>S: Refund full deposit
-                S-->>B: Notify borrower of deposit refund
-            end
 
-            B->>S: Review owner
-            O->>S: Review borrower
+                O->>S: Mark item as returned
+                S-->>B: Notify borrower of return
+
+                alt Item damaged
+                    O->>S: Record damage and proposed charge
+                    S-->>B: Notify borrower and allow 48 hours to review
+                    opt Borrower disputes damage report
+                        B->>S: Submit dispute
+                        O->>S: Review dispute and revise or uphold charge
+                    end
+                    S->>S: Deduct agreed charge from deposit
+                    S-->>B: Refund remaining deposit
+                else Item in good condition
+                    O->>S: Confirm good condition
+                    S->>S: Refund full deposit
+                    S-->>B: Notify borrower of deposit refund
+                end
+
+                B->>S: Review owner
+                O->>S: Review borrower
+            end
         end
     end
 ```
+
 
 ### 4.3 Account flow
 
