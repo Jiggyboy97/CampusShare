@@ -12,6 +12,8 @@
 | **Application baseline** | Branch `joe-work` (snapshot dated 2026-10-26), reviewed 2026-10-27. Not yet merged into `main` |
 | **Location** | `docs/requirements/SRS.md` |
 
+**Implementation evidence update:** Selected requirements and the traceability table were checked against `main` at `5fbb0de`. The Windows test suite passed all 95 tests. The application baseline above records the original v0.4 review snapshot.
+
 ## Revision history
 
 | Version | Date | Author | Change |
@@ -192,11 +194,11 @@ CampusShare has one account type with a role field. Full detail is in `user-role
 | FR-AUTH-06 | The system shall let a user reset a forgotten password using a link sent to the registered email, valid for 30 minutes and usable once. | M | Partial | T |
 | FR-AUTH-07 | The system shall let a user request a new verification email, limited to three requests per email and IP address per hour. | S | Partial | T |
 
-*FR-AUTH-06 team comment:* Code was written but is not functional; this depends on access to the SMTP server.
+*FR-AUTH-06 delivery check:* Verify delivery to a real inbox using the demo SMTP configuration (FR-EXT-03).
 
 *FR-AUTH-07 team comment:* Structure implemented but not functional; depends on access to the SMTP server.
 
-*FR-AUTH-06 note:* the link is emailed (no longer printed to the console) and expires after 30 minutes, but the code does not invalidate it after use, so it can be reused within the time limit.
+*FR-AUTH-06 note:* The link expires after 30 minutes. A successful reset invalidates it. Automated tests cover expiration and single use. Status remains Partial pending real-inbox delivery.
 
 #### 3.2.2 Equipment listings
 
@@ -210,7 +212,7 @@ CampusShare has one account type with a role field. Full detail is in `user-role
 | FR-LST-06 | The system shall show each listing's status as Available (no Pending or Approved request), Pending (at least one Pending request and none Approved), or Booked (at least one Approved request). *(current behavior; section 6.2, question 5)* | M | Done | T |
 | FR-LST-07 | The system shall let an owner upload, replace, and remove a photo for a listing (JPG, PNG, or WebP, at most 5 MB, checked by file content). | S | Done | T |
 | FR-LST-08 | The system shall let an owner offer hourly rentals within a daily pickup and return window. | S | Done | T |
-| FR-LST-09 | The system shall not let an owner edit a listing while it has a Pending, Approved, or Overdue request. *(scope of the restriction proposed, to confirm)* | M | Missing | T |
+| FR-LST-09 | The system shall not let an owner edit a listing while it has a Pending, Approved, or Overdue request. *(scope of the restriction proposed, to confirm)* | M | Done | T |
 
 *FR-LST-04 team comment:* Need to block the owner from editing a listing during a booking. This is now requirement FR-LST-09 (v0.4). The price and deposit of a request are saved when the request is created (FR-REQ-05), so later edits do not change a request already made.
 
@@ -260,7 +262,7 @@ CampusShare has one account type with a role field. Full detail is in `user-role
 | Change | Governing requirement | Status |
 |---|---|---|
 | Pending to Approved | FR-REQ-07 | To verify |
-| Pending to Rejected | FR-REQ-07, FR-MTG-04, FR-PAY-14 | Partial |
+| Pending to Rejected | FR-REQ-07, FR-MTG-04, FR-PAY-14 | Partial. The paid-rejection refund path is tested; verify the inspection-failure path separately. |
 | Approved to Overdue | FR-REQ-12 | To verify |
 | Approved to Completed | FR-PAY-03 | Done |
 | Overdue to Completed | FR-PAY-03 | To verify |
@@ -280,7 +282,7 @@ CampusShare has one account type with a role field. Full detail is in `user-role
 | FR-PAY-11 | The system shall let the borrower pay a late fee after the rental is completed. | S | To verify | T |
 | FR-PAY-12 | The system shall not let a rental with a price above zero be marked returned until its payment is recorded as Paid. | M | Done | T |
 | FR-PAY-13 | The system shall show the rental fee and the security deposit as separate amounts, state that the deposit is not part of the rental fee, and let the borrower pay in this order: the rental fee after confirming to proceed (FR-MTG-03), then condition photos (FR-MTG-05), then the deposit. | M | To verify | T |
-| FR-PAY-14 | The system shall refund the rental fee and release the deposit if the owner rejects a request after the borrower has paid. | M | Missing | T |
+| FR-PAY-14 | The system shall refund the rental fee and release the deposit if the owner rejects a request after the borrower has paid. | M | Done | T |
 | FR-PAY-15 | The system shall refund the remaining deposit (the held deposit minus the settled damage charge) to the borrower after a damage charge is settled. | M | To verify | T |
 
 *FR-PAY-03 team comment:* Need to work on the Overdue module.
@@ -309,7 +311,7 @@ CampusShare has one account type with a role field. Full detail is in `user-role
 | FR-MSG-01 | The system shall let a registered user send a text message of up to 1,000 characters to another registered user. | M | Done | T |
 | FR-MSG-02 | The system shall show a list of conversations with the latest message and unread count. | M | Done | T |
 | FR-MSG-03 | The system shall mark messages as read when the recipient opens the conversation. | M | Done | T |
-| FR-MSG-04 | The system shall let a user delete only messages they sent. | S | Missing | T |
+| FR-MSG-04 | The system shall let a user delete only messages they sent. | S | Done | T |
 | FR-MSG-05 | The system shall let a borrower start a conversation with an item's owner from the item page (Message Owner button). | S | Done | T |
 | FR-MSG-06 | The system shall let an owner start a conversation with a borrower from a request (Message Borrower link). | S | Done | T |
 
@@ -368,34 +370,34 @@ CampusShare has one account type with a role field. Full detail is in `user-role
 |---|---|---|---|---|
 | SEC-01 | The system shall activate an account only after the user confirms, within 24 hours, a link sent to the registered university email. | M | Done | T |
 | SEC-02 | The system shall require passwords of 8 to 128 characters that are not on a list of common passwords. | M | Done | T |
-| SEC-03 | The system shall store passwords only as salted hashes. | M | To verify | I |
-| SEC-04 | The system shall read its secret key from configuration outside the source code and refuse to start without it. | M | To verify | I |
+| SEC-03 | The system shall store passwords only as salted hashes. | M | Done | I |
+| SEC-04 | The system shall read its secret key from configuration outside the source code and refuse to start without it. | M | Done | I |
 | SEC-05 | The system shall protect every state-changing request against cross-site request forgery. | M | Done | T |
 | SEC-06 | The system shall end sessions after 30 minutes of inactivity and shall set the cookie flags HttpOnly and SameSite, and Secure when served over HTTPS. | M | Done | T |
 | SEC-07 | The system shall block further login attempts for 15 minutes after 5 failed attempts for the same account. | M | Done | T |
 | SEC-08 | The system shall check on the server that the acting user owns the listing or request, and that the request is in a valid state, before any owner-only or borrower-only action. | M | Partial | T |
 | SEC-09 | The system shall validate all input on the server (types, ranges, dates, lengths) and respond with a clear, styled error page instead of failing. | M | Partial | T |
 | SEC-10 | The system shall use parameterized database queries for all data access. | M | Done | I |
-| SEC-11 | The system shall make password-reset links single-use and shall not reveal whether an email is registered. | M | Partial | T |
+| SEC-11 | The system shall make password-reset links single-use and shall not reveal whether an email is registered. | M | Done | T |
 | SEC-12 | The system shall bind the development server to the local machine only, and shall be served over HTTPS in deployment. | M | Partial | I |
 | SEC-13 | The system shall show other users only a name, not an email address or student ID. | M | Done | T |
 | SEC-14 | The system shall not write secrets, tokens, or reset links to logs or consoles. | M | Partial | T |
 | SEC-15 | The system shall escape user-supplied text on every page to prevent script injection. | M | Done | I |
-| SEC-16 | The system shall log security-relevant events (failed logins, approvals, deposit changes, damage decisions, dispute decisions) without recording credentials or personal text. | S | Missing | T |
+| SEC-16 | The system shall log security-relevant events (failed logins, approvals, deposit changes, damage decisions, dispute decisions) without recording credentials or personal text. | S | Done | T |
 
 *SEC-08 team comment:* Needs fixing. Status changed from Not Done to Partial because G-16 records that request status changes are now checked.
 
-*SEC-11 team comment:* Needs BUAA SMTP access.
+*SEC-11 delivery dependency:* Track real-inbox delivery separately under FR-EXT-03.
 
 *SEC-14 note:* the reset link is no longer printed to the console (G-15); other secrets and tokens in logs have not been checked.
 
-*SEC-03, SEC-04, SEC-16:* no evidence is recorded in this document yet. SEC-03 and SEC-04 need an inspection result (G-12 is To verify).
+*SEC-03 and SEC-04:* Registration and password reset store salted hashes. Startup requires the signing key from the environment.
 
 *SEC-01 note:* the logic is tested (TC-02). The student ID is recorded as a unique identifier but is not checked against any source, so the current release verifies only the university email (section 6.1). The 24-hour validity was shown in the account flow (section 4.3) but not stated here in v0.3.
 
 *SEC-09 note:* many validations are tested (dates, amounts, files, passwords), but completeness for every field has not been demonstrated.
 
-*SEC-11 note:* the reset response is the same for known and unknown emails (tested). Links are not invalidated after use.
+*SEC-11 note:* The reset response is the same for known and unknown emails. A successful reset invalidates the link. Both behaviors are covered by automated tests.
 
 *SEC-12 note:* the status stays Partial until an HTTPS deployment exists. The server binds to `127.0.0.1`, and production mode requires a trusted HTTPS proxy, redirects HTTP, and sets HSTS. No HTTPS deployment exists yet.
 
@@ -456,8 +458,8 @@ v0.3 had no rule for how long personal data is kept or how it is deleted. The pe
 
 | ID | Requirement | Pri | Status | Ver |
 |---|---|---|---|---|
-| FR-DAT-01 | The system shall let a user request deletion of their account. On deletion the system shall remove the user's name, email, and student ID and show "Deleted user" instead, and shall keep the rental, payment, and rating records that the other party needs. | S | Missing | T |
-| FR-DAT-02 | The system shall delete or anonymise each kind of data in the table below when its retention period ends. | S | Missing | T |
+| FR-DAT-01 | The system shall let a user request deletion of their account. On deletion the system shall remove the user's name, email, and student ID and show "Deleted user" instead, and shall keep the rental, payment, and rating records that the other party needs. | S | Done | T |
+| FR-DAT-02 | The system shall delete or anonymise each kind of data in the table below when its retention period ends. | S | Partial | T |
 
 | Data | Purpose | Proposed retention | On account deletion |
 |---|---|---|---|
@@ -470,6 +472,10 @@ v0.3 had no rule for how long personal data is kept or how it is deleted. The pe
 | Rental reminder records | Prevent duplicate reminders | Until 30 days after the rental ends | Not applicable |
 | Security log (SEC-16) | Audit | 90 days | Not applicable |
 | Database backups | Recovery | The most recent 14 daily copies | Deleted data leaves the backups as old copies are replaced |
+
+*FR-DAT-01 implementation note:* Account deletion requires password confirmation and is blocked while the user has open rentals. It replaces account identifiers with placeholders and preserves linked history.
+
+*FR-DAT-02 implementation note:* The manual cleanup command defaults to preview. It handles old attempt records, messages, notifications, eligible reminders, and selected rental text and meetup fields. It does not manage uploaded files, log rotation, or backup rotation, and retains the core rental records. The periods in the table still require team approval.
 
 ### 3.7 Withdrawn and merged IDs
 
@@ -726,7 +732,7 @@ The branch contains 76 automated tests, which all passed in the reviewer's run o
 | TC-13 Send a message containing a script tag | SEC-15 | Shown as text, not run |
 | TC-14 Use Message Owner, send a message, log in as the owner | FR-MSG-05, FR-NTF-06 | Owner sees a badge with 1 unread message |
 | TC-15 Open the conversation as the owner | FR-NTF-06 | Badge disappears |
-| TC-16 Use a password reset link twice | SEC-11 | Second use should be refused (currently accepted) |
+| TC-16 Use a password reset link twice | SEC-11 | Second use is refused |
 | TC-17 View the app on a 360 px wide screen | NFR-USE-03 | No sideways scrolling |
 | TC-18 Try to refund the deposit when the condition is Damaged, then when it is Good Condition and the rental is Completed | FR-PAY-06 | Refused when Damaged; accepted when Good Condition |
 | TC-19 Start the application without a secret key configured | SEC-04 | The application refuses to start |
@@ -762,7 +768,7 @@ This table links every requirement to the evidence recorded for it. The 76 autom
 | FR-AUTH-03 | T | Done | Automated tests, topic: registration and email verification | Name the automated test that covers it |
 | FR-AUTH-04 | T | Done | Automated tests, topic: registration and email verification | Name the automated test that covers it |
 | FR-AUTH-05 | T | Done | Automated tests, topic: CSRF | Name the automated test that covers it |
-| FR-AUTH-06 | T | Partial | Automated tests, topic: registration and email verification | Name the automated test that covers it |
+| FR-AUTH-06 | T | Partial | Automated: `test_expired_password_reset_link_is_rejected`, `test_password_reset_link_can_only_be_used_once` | Verify delivery to a real inbox (FR-EXT-03) |
 | FR-AUTH-07 | T | Partial | Automated tests, topic: registration and email verification | Name the automated test that covers it |
 | FR-LST-01 | T | Done | None recorded | Add a test case or record an inspection result |
 | FR-LST-02 | T | Done | Automated tests, topic: listing and rental validation | Name the automated test that covers it |
@@ -772,7 +778,7 @@ This table links every requirement to the evidence recorded for it. The 76 autom
 | FR-LST-06 | T | Done | None recorded | Add a test case or record an inspection result |
 | FR-LST-07 | T | Done | Automated tests, topic: photo upload | Name the automated test that covers it |
 | FR-LST-08 | T | Done | None recorded | Add a test case or record an inspection result |
-| FR-LST-09 | T | Missing | Manual: TC-29 (new, not yet run) | Run the test case |
+| FR-LST-09 | T | Done | Automated: `test_listing_cannot_be_edited_during_active_rental` and `test_listing_can_be_edited_after_rental_completes` | Confirm the scope of the restriction with the team |
 | FR-BRW-01 | T | Done | None recorded | Add a test case or record an inspection result |
 | FR-BRW-02 | T | Done | None recorded | Add a test case or record an inspection result |
 | FR-BRW-03 | T | Done | None recorded | Add a test case or record an inspection result |
@@ -801,7 +807,7 @@ This table links every requirement to the evidence recorded for it. The 76 autom
 | FR-PAY-11 | T | To verify | None recorded | Add a test case or record an inspection result |
 | FR-PAY-12 | T | Done | Automated tests, topic: payment, deposit and damage handling | Name the automated test that covers it |
 | FR-PAY-13 | T | To verify | None recorded | Add a test case or record an inspection result |
-| FR-PAY-14 | T | Missing | Manual: TC-23 (new, not yet run) | Run the test case |
+| FR-PAY-14 | T | Done | Automated: `test_paid_pending_rejection_refunds_payment_and_held_deposit` | None |
 | FR-PAY-15 | T | To verify | None recorded | Add a test case or record an inspection result |
 | FR-RAT-01 | T | Done | Automated tests, topic: ratings | Name the automated test that covers it |
 | FR-RAT-02 | T | Done | Automated tests, topic: ratings | Name the automated test that covers it |
@@ -810,7 +816,7 @@ This table links every requirement to the evidence recorded for it. The 76 autom
 | FR-MSG-01 | T | Done | None recorded | Add a test case or record an inspection result |
 | FR-MSG-02 | T | Done | None recorded | Add a test case or record an inspection result |
 | FR-MSG-03 | T | Done | Section 5.2: Reviewer script: unread count rose to 1, then cleared when the owner opened the chat | None |
-| FR-MSG-04 | T | Missing | None recorded | Add a test case or record an inspection result |
+| FR-MSG-04 | T | Done | Automated: `test_only_message_sender_can_delete_message` | None |
 | FR-MSG-05 | T | Done | Manual: TC-14; Section 5.2: Reviewer script: button present; message sent; owner notified | None |
 | FR-MSG-06 | T | Done | Section 5.2: Read `requests.html` and the route | None |
 | FR-NTF-01 | T | Partial | Automated tests, topic: notifications and email | Name the automated test that covers it |
@@ -833,20 +839,20 @@ This table links every requirement to the evidence recorded for it. The 76 autom
 | FR-MTG-07 | T | To verify | Manual: TC-28 (new, not yet run) | Run the test case |
 | SEC-01 | T | Done | Manual: TC-02, TC-27; Automated tests, topic: registration and email verification | None |
 | SEC-02 | T | Done | Automated tests, topic: password rules | Name the automated test that covers it |
-| SEC-03 | I | To verify | None recorded | Add a test case or record an inspection result |
-| SEC-04 | I | To verify | Manual: TC-19 (new, not yet run) | Run the test case |
+| SEC-03 | I | Done | Inspection: registration and reset in `campusshare_routes.py` use Werkzeug's salted password hashes | None |
+| SEC-04 | I | Done | Inspection: `app.py` reads `FLASK_SECRET_KEY` and raises an error if it is empty or missing | None |
 | SEC-05 | T | Done | Manual: TC-11; Automated tests, topic: CSRF | None |
 | SEC-06 | T | Done | Automated tests, topic: sessions and cookies | Name the automated test that covers it |
 | SEC-07 | T | Done | Manual: TC-12; Automated tests, topic: login lockout | None |
 | SEC-08 | T | Partial | Manual: TC-10 | None |
 | SEC-09 | T | Partial | Automated tests, topic: listing and rental validation | Name the automated test that covers it |
 | SEC-10 | I | Done | Section 5.2: Searched the code; none found | None |
-| SEC-11 | T | Partial | Manual: TC-16 | None |
+| SEC-11 | T | Done | Automated: `test_password_reset_link_can_only_be_used_once`, `test_forgot_password_handles_unknown_and_registered_emails` | None |
 | SEC-12 | I | Partial | None recorded | Add a test case or record an inspection result |
 | SEC-13 | T | Done | None recorded | Add a test case or record an inspection result |
 | SEC-14 | T | Partial | None recorded | Add a test case or record an inspection result |
 | SEC-15 | I | Done | Manual: TC-13; Section 5.2: No `safe` filter or `render_template_string` found | None |
-| SEC-16 | T | Missing | None recorded | Add a test case or record an inspection result |
+| SEC-16 | T | Done | Automated: `test_security_relevant_actions_are_logged_without_credentials` | None |
 | NFR-PERF-01 | T | Partial | Section 5.2: Reviewer ran `performance_test.py` | None |
 | NFR-USE-01 | T | Done | None recorded | Add a test case or record an inspection result |
 | NFR-USE-02 | T | Done | Automated tests, topic: error pages | Name the automated test that covers it |
@@ -856,8 +862,8 @@ This table links every requirement to the evidence recorded for it. The 76 autom
 | NFR-MNT-01 | I | Done | None recorded | Add a test case or record an inspection result |
 | NFR-MNT-02 | I | Done | None recorded | Add a test case or record an inspection result |
 | NFR-POR-01 | D | Done | None recorded | Add a test case or record an inspection result |
-| FR-DAT-01 | T | Missing | None recorded | Add a test case or record an inspection result |
-| FR-DAT-02 | T | Missing | None recorded | Add a test case or record an inspection result |
+| FR-DAT-01 | T | Done | Automated: `test_account_deletion_requires_password_and_confirm_word` and `test_account_deletion_blocks_open_rentals_and_preserves_completed_history`; inspected `/account/delete` | None |
+| FR-DAT-02 | T | Partial | Automated: `test_retention_cleanup_previews_without_changing_rows` and `test_retention_cleanup_applies_only_eligible_rows` | Confirm retention policy and cover remaining data categories |
 
 ---
 
@@ -884,7 +890,7 @@ The decisions below are settled by the implementation or by the team's review of
 | 1 | Should browsing stay public? | Visitors can open the browse page without logging in |
 | 5 | Should a listing with one booking still show Booked for its free dates? | Now that several bookings are allowed, the label may mislead (FR-LST-06) |
 | 6 | Who sets up HTTPS, SMTP, and the schedulers for the demonstration? | SEC-12, FR-EXT-03, FR-NTF-04, and NFR-REL-02 depend on it |
-| 7 | Should password-reset links be invalidated after use? | Closes the remaining part of SEC-11 |
+| 7 | Resolved: a successful password reset invalidates the link. | SEC-11 |
 | 8 | Which `Partial` and `To verify` items will be finished before Week 16? | Fixes the scope for the demonstration |
 | 9 | Who decides a damage dispute: the owner alone, or the administrator when the owner and borrower do not agree? | FR-PAY-08 and FR-ADM-03 currently describe different deciders |
 | 10 | Does handover need inspection approval from both the borrower and the owner, or from the borrower only? | The code is reported to need both; FR-MTG-03 names only the borrower |
@@ -920,10 +926,10 @@ The first review (v0.1, 2026-10-17 and 2026-10-18) found these gaps in `main`. T
 | G-09 | No notification when a request arrived or changed | Resolved | FR-NTF-01 |
 | G-10 | No live cost calculator and no reminders | Cost estimate resolved; reminders Partial (need a scheduler) | FR-REQ-06, FR-NTF-04 |
 | G-11 | No in-app payment; Paid was only a label | Partly resolved: simulated QR payment; no real money | FR-PAY-01, FR-PAY-10 |
-| G-12 | Secret key written in the source | To verify | SEC-04 |
+| G-12 | Secret key written in the source | Resolved: startup requires `FLASK_SECRET_KEY` | SEC-04 |
 | G-13 | No CSRF protection | Resolved | SEC-05 |
 | G-14 | Student directory showed every user's name and email | Resolved | SEC-13 |
-| G-15 | Reset link printed to the console and reusable | Partly resolved: emailed and not printed; still reusable | FR-AUTH-06, SEC-11, SEC-14 |
+| G-15 | Reset link printed to the console and reusable | Resolved: sent by email, omitted from logs, and invalidated after use | FR-AUTH-06, SEC-11, SEC-14 |
 | G-16 | Request status changes were not checked | Resolved | FR-REQ-08 |
 | G-17 | Deleting a listing deleted its rental history | Resolved | FR-LST-05 |
 | G-18 | Server listened on all network addresses | To verify | SEC-12 |
@@ -936,7 +942,7 @@ The first review (v0.1, 2026-10-17 and 2026-10-18) found these gaps in `main`. T
 
 | ID | Observation | Requirement | State |
 |---|---|---|---|
-| G-23 | Password-reset links are not invalidated after use | SEC-11, FR-AUTH-06 | Not resolved |
+| G-23 | Password-reset links are not invalidated after use | SEC-11, FR-AUTH-06 | Resolved on main. Real-inbox delivery remains pending under FR-EXT-03. |
 | G-24 | Email delivery through a real SMTP account has not been verified | FR-EXT-03, FR-NTF-05 | Not resolved; needs SMTP access |
 | G-25 | Return reminders and database backups need a scheduler; scripts exist for Windows only | FR-NTF-04, NFR-REL-02, FR-EXT-06 | Partly resolved: Windows scripts exist; macOS and Linux need manual scheduling |
 | G-26 | Uploaded photos are stored on local disk and are not backed up | FR-LST-07, NFR-REL-02, FR-EXT-05 | Known limitation, documented in v0.4 (section 6.1) |
